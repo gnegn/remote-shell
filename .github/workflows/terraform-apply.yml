@@ -39,4 +39,3 @@ jobs:
           cd infra/
           terraform apply -auto-approve -var="key_name=control-center"
       -
-

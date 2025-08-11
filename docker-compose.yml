@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     networks:
       - app-network
+    volumes:
+      - sqlite_data:/app/data 
 
   frontend:
     build: ./frontend
@@ -18,6 +20,9 @@ services:
       - app-network
     environment:
       - VITE_BACKEND_URL=http://api:8000
+
+volumes:
+  sqlite_data:
 
 networks:
   app-network:

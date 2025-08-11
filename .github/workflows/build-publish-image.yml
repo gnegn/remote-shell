@@ -80,6 +80,7 @@ jobs:
             sudo docker pull ${{ env.FRONTEND_IMAGE }}
 
             sudo docker run -d --name api --network app-network -p 8000:8000 \
+              -v /home/ec2-user/dh-data:/app/data\
               ${{ env.API_IMAGE }}
 
             sudo docker run -d --name frontend --network app-network -p 5173:5173 \

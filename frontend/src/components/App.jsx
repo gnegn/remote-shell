@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Nav from './nav.jsx';
+import Nav from './Nav.jsx';
 import IndexPage from '../pages/IndexPage.jsx';
 import BasePage from '../pages/BasePage.jsx';
 import MonitoringPage from '../pages/MonitoringPage.jsx';

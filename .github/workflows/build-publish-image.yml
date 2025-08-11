@@ -1,90 +1,88 @@
 name: Build and Deploy Double Helix App
 
 on:
-  push:
-    branches:
-      - backend
   workflow_dispatch:
+
+env:
+  API_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/double-helix-app-api-dev-${{ github.sha }}
+  FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/double-helix-app-frontend-dev-${{ github.sha }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set image tags from commit SHA
-      run: |
-        echo "API_IMAGE_TAG=double-helix-app-api-dev-${{ github.sha }}" >> $GITHUB_ENV
-        echo "FRONTEND_IMAGE_TAG=double-helix-app-frontend-dev-${{ github.sha }}" >> $GITHUB_ENV
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push API Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          push: true
+          tags: ${{ env.API_IMAGE }}
+          no-cache: true
 
-    - name: Build and push API Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./api
-        push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.API_IMAGE_TAG }}
-        no-cache: true
-
-    - name: Build and push Frontend Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.FRONTEND_IMAGE_TAG }}
-        no-cache: true
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}
+          no-cache: true
 
   deploy-to-ec2:
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install SSH key
-      uses: webfactory/ssh-agent@v0.9.0
-      with:
-        ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
-    - name: Deploy and run Docker containers on EC2
-      env:
-        API_IMAGE_TAG: double-helix-app-api-dev-${{ github.sha }}
-        FRONTEND_IMAGE_TAG: double-helix-app-frontend-dev-${{ github.sha }}
-      run: |
-        ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "
-          sudo yum update -y
-          sudo yum install -y docker
-          sudo systemctl enable docker
-          sudo systemctl start docker
-          sudo usermod -a -G docker ec2-user
+      - name: Deploy and run Docker containers on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo systemctl enable docker
+            sudo systemctl start docker
+            sudo usermod -a -G docker ec2-user
 
-          if ! sudo docker network ls | grep app-network; then
-            sudo docker network create app-network
-          fi
+            if ! sudo docker network ls | grep app-network; then
+              sudo docker network create app-network
+            fi
 
-          sudo docker stop double-helix-api-dev || true
-          sudo docker rm double-helix-api-dev || true
-          sudo docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/\$API_IMAGE_TAG || true
+            for port in 8000 5173; do
+              cid=\$(sudo docker ps -aq --filter \"publish=\$port\")
+              if [ -n \"\$cid\" ]; then
+                sudo docker stop \$cid || true
+                sudo docker rm \$cid || true
+              fi
+            done
 
-          sudo docker stop double-helix-frontend-dev || true
-          sudo docker rm double-helix-frontend-dev || true
-          sudo docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/\$FRONTEND_IMAGE_TAG || true
+            sudo docker stop api || true
+            sudo docker rm api || true
+            sudo docker rmi ${{ env.API_IMAGE }} || true
 
-          # DOWNLOAD IMAGES
-          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/\$API_IMAGE_TAG
-          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/\$FRONTEND_IMAGE_TAG
+            sudo docker stop frontend || true
+            sudo docker rm frontend || true
+            sudo docker rmi ${{ env.FRONTEND_IMAGE }} || true
 
-          # RUN API
-          sudo docker run -d --name double-helix-api-dev --network app-network -p 8000:8000 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/\$API_IMAGE_TAG
+            sudo docker pull ${{ env.API_IMAGE }}
+            sudo docker pull ${{ env.FRONTEND_IMAGE }}
 
-          # RUN FRONTEND
-          sudo docker run -d --name double-helix-frontend-dev --network app-network -p 5173:5173 \
-            -e VITE_BACKEND_URL=http://double-helix-api-dev:8000 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/\$FRONTEND_IMAGE_TAG
-        "
+            sudo docker run -d --name api --network app-network -p 8000:8000 \
+              ${{ env.API_IMAGE }}
+
+            sudo docker run -d --name frontend --network app-network -p 5173:5173 \
+              -e VITE_BACKEND_URL=http://api:8000 \
+              ${{ env.FRONTEND_IMAGE }}
+          "

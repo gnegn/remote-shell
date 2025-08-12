@@ -186,6 +186,90 @@ header {
 li{
     list-style: none;
 }
+input{
+    padding: .25rem 0 .25rem .25rem;
+}
 
+.h1-title{
+    padding-block: 1rem;
+}
 
+.flex{
+    display: flex;
+    flex-direction: column;
+}
 
+.flex-buttons{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding-block: 1rem;
+}
+
+.input-wrapper{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap:1rem;
+}
+
+.submit-button, .refresh-button {
+    padding:.25rem 1rem;
+}
+
+.table-container {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  overflow-x: auto;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.table-message {
+  padding: 16px;
+  font-size: 14px;
+  color: #555;
+}
+
+.server-table {
+    text-align: left;
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.server-table thead {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+}
+
+.server-table th {
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.server-table td {
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  font-size: 14px;
+  color: #444;
+  vertical-align: top;
+}
+
+.server-table tbody tr:hover {
+  background-color: #f5faff;
+}
+
+.break-word {
+  word-break: break-word;
+  max-width: 240px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-inline: 1rem;
+}

@@ -1,24 +1,27 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from models import db, Server
+from models import db, Server, PendingCommand, CommandResult
 from config import Config
 from datetime import datetime
 import os
 import flask
+import logging
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.logger.setLevel(logging.INFO)
 
 with app.app_context():
     db.create_all() 
 
-print("Flask version:", flask.__version__)
-
+# Function to create tables if they do not exist
 def create_tables():
     db.create_all()
 
+# Function to convert Server object to JSON 
 def server_to_json(s: Server):
     return {
         "id": s.id,
@@ -36,7 +39,9 @@ def pick_field(data, *variants):
             return data[v]
     return None
 
-# GET list
+# -------------------------API Endpoints-------------------------
+
+# GET all
 @app.route("/api/servers", methods=["GET"])
 def get_servers():
     servers = Server.query.order_by(Server.created_at.desc()).all()
@@ -72,6 +77,76 @@ def create_server():
     db.session.add(s)
     db.session.commit()
     return jsonify(server_to_json(s)), 201
+
+# ----------------------------COMMANDS--------------------------------
+
+# Send Command
+@app.route("/api/send-command", methods=["POST"])
+def send_command():
+    data = request.get_json() or {}
+    app.logger.info(f"Received send-command request with data: {data}")
+
+    server_id = data.get("server_id")
+    command = data.get("command")
+    if not server_id or not command:
+        app.logger.warning("send-command: Missing server_id or command")
+        return jsonify({"error": "server_id and command are required"}), 400
+
+    # Check if server exists
+    if not Server.query.get(server_id):
+        app.logger.warning(f"send-command: Server with id {server_id} not found")
+        return jsonify({"error": "Server not found"}), 404
+
+    # Store the command in PendingCommand
+    cmd = PendingCommand(server_id=server_id, command=command)
+    db.session.add(cmd)
+    db.session.commit()
+    app.logger.info(f"send-command: Command stored for server_id {server_id}")
+    return jsonify({"status": "Command stored"}), 201
+
+# PULL Command
+@app.route("/api/get-command/<int:server_id>", methods=["GET"])
+def get_command_for_agent(server_id):
+    app.logger.info(f"get-command: Request for server_id {server_id}")
+    cmd = PendingCommand.query.filter_by(server_id=server_id).order_by(PendingCommand.created_at.asc()).first()
+    if cmd:
+        command_data = {"command_id": cmd.id, "command": cmd.command}
+        app.logger.info(f"get-command: Sending command id {cmd.id} to server_id {server_id}")
+        db.session.delete(cmd)
+        db.session.commit()
+        return jsonify(command_data), 200
+    app.logger.info(f"get-command: No pending commands for server_id {server_id}")
+    return jsonify({"command": None}), 200
+
+# SEND Result
+@app.route("/api/send-result", methods=["POST"])
+def send_result():
+    data = request.get_json() or {}
+    app.logger.info(f"Received send-result request with data: {data}")
+
+    server_id = data.get("server_id")
+    result = data.get("result")
+    if not server_id or result is None:
+        app.logger.warning("send-result: Missing server_id or result")
+        return jsonify({"error": "server_id and result are required"}), 400
+
+    res = CommandResult(server_id=server_id, result=result)
+    db.session.add(res)
+    db.session.commit()
+    app.logger.info(f"send-result: Result stored for server_id {server_id}")
+    return jsonify({"status": "Result stored"}), 201
+
+# GET Result
+@app.route("/api/get-result/<int:server_id>", methods=["GET"])
+def get_result(server_id):
+    app.logger.info(f"get-result: Request for server_id {server_id}")
+    res = CommandResult.query.filter_by(server_id=server_id).order_by(CommandResult.created_at.desc()).first()
+    if res:
+        app.logger.info(f"get-result: Returning result created at {res.created_at.isoformat()} for server_id {server_id}")
+        return jsonify({"result": res.result, "created_at": res.created_at.isoformat()}), 200
+    app.logger.info(f"get-result: No results found for server_id {server_id}")
+    return jsonify({"result": None}), 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), debug=True)

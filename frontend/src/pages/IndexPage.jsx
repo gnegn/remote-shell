@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CommandList from '../components/CommandList';
 
 export default function IndexPage() {
   const [serverId, setServerId] = useState('');
@@ -25,9 +26,11 @@ export default function IndexPage() {
   };
 
   return (
-    <div style={{ marginTop: '5rem' }}>
-      <h1>Керування серверами</h1>
-
+    <div className='content'>
+      <h1 className="h1-title">Керування серверами</h1>
+<div className='command-wrapper'>
+      <CommandList setCommandInput={setCommand} />
+</div>
       <div>
         <label>Server ID:</label>
         <input value={serverId} onChange={e => setServerId(e.target.value)} />
@@ -44,9 +47,13 @@ export default function IndexPage() {
       </div>
 
       <div>
-        <h3>Результат:</h3>
-        <pre>{result}</pre>
+      <label>Результат:</label>
+      <textarea
+        value={result}
+        onChange={(e) => setResult(e.target.value)}
+      />
       </div>
+      
     </div>
   );
 }

@@ -18,6 +18,7 @@ class PendingCommand(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     server_id = db.Column(db.Integer, db.ForeignKey('servers.id'), nullable=False)
     command = db.Column(db.Text, nullable=False)
+    is_script = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CommandResult(db.Model):

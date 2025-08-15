@@ -84,38 +84,51 @@ def create_server():
 @app.route("/api/send-command", methods=["POST"])
 def send_command():
     data = request.get_json() or {}
-    app.logger.info(f"Received send-command request with data: {data}")
-
-    server_id = data.get("server_id")
+    script = data.get("script")  # наприклад: "basic/sys-info.ps1"
     command = data.get("command")
-    if not server_id or not command:
-        app.logger.warning("send-command: Missing server_id or command")
-        return jsonify({"error": "server_id and command are required"}), 400
+    server_id = data.get("server_id")
 
-    # Check if server exists
+    if not server_id or (not script and not command):
+        return jsonify({"error": "Missing server_id and script/command"}), 400
+
     if not Server.query.get(server_id):
-        app.logger.warning(f"send-command: Server with id {server_id} not found")
         return jsonify({"error": "Server not found"}), 404
 
-    # Store the command in PendingCommand
-    cmd = PendingCommand(server_id=server_id, command=command)
+    if script:
+        command = script
+        is_script = True
+    else:
+        is_script = False
+
+    cmd = PendingCommand(server_id=server_id, command=command, is_script=is_script)
     db.session.add(cmd)
     db.session.commit()
-    app.logger.info(f"send-command: Command stored for server_id {server_id}")
-    return jsonify({"status": "Command stored"}), 201
+
+    return jsonify({"status": "ok", "command_id": cmd.id}), 201
 
 # PULL Command
 @app.route("/api/get-command/<int:server_id>", methods=["GET"])
 def get_command_for_agent(server_id):
-    app.logger.info(f"get-command: Request for server_id {server_id}")
     cmd = PendingCommand.query.filter_by(server_id=server_id).order_by(PendingCommand.created_at.asc()).first()
     if cmd:
-        command_data = {"command_id": cmd.id, "command": cmd.command}
-        app.logger.info(f"get-command: Sending command id {cmd.id} to server_id {server_id}")
+        payload = {
+            "command_id": cmd.id,
+            "command": cmd.command,
+            "is_script": cmd.is_script
+        }
+
+        # Якщо це скрипт, додаємо вміст скрипта:
+        if cmd.is_script:
+            script_path = os.path.join("etc", "scripts", cmd.command)
+            try:
+                with open(script_path, "r", encoding="utf-8") as f:
+                    payload["script_content"] = f.read()
+            except Exception as e:
+                payload["script_content"] = f"# Error loading script: {e}"
+
         db.session.delete(cmd)
         db.session.commit()
-        return jsonify(command_data), 200
-    app.logger.info(f"get-command: No pending commands for server_id {server_id}")
+        return jsonify(payload), 200
     return jsonify({"command": None}), 200
 
 # SEND Result

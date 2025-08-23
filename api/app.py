@@ -6,6 +6,8 @@ from datetime import datetime
 import os
 import flask
 import logging
+import secrets
+import string
 
 
 app = Flask(__name__)
@@ -30,7 +32,8 @@ def server_to_json(s: Server):
         "usable-by": s.usable_by,
         "created-at": s.created_at.isoformat() if s.created_at else None,
         "created-by": s.created_by,
-        "1c-name": s.one_c_name
+        "1c-name": s.one_c_name,
+        "agent_password": s.agent_password
     }
 
 def pick_field(data, *variants):
@@ -38,6 +41,13 @@ def pick_field(data, *variants):
         if v in data:
             return data[v]
     return None
+
+
+# Generate a random password
+def generate_password(length=16):
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
 
 # -------------------------API Endpoints-------------------------
 
@@ -67,16 +77,23 @@ def create_server():
     if not name or not remote_url or not created_by:
         return jsonify({"error": "Missing required fields: name, remote-url, created-by"}), 400
 
+    password = generate_password()  
+
     s = Server(
         name=name,
         remote_url=remote_url,
         usable_by=usable_by,
         created_by=created_by,
-        one_c_name=one_c_name
+        one_c_name=one_c_name,
+        agent_password=password
     )
     db.session.add(s)
     db.session.commit()
-    return jsonify(server_to_json(s)), 201
+
+    response = server_to_json(s)
+    response["agent_password"] = password  
+
+    return jsonify(response), 201
 
 # ----------------------------COMMANDS--------------------------------
 
@@ -139,9 +156,18 @@ def send_result():
 
     server_id = data.get("server_id")
     result = data.get("result")
-    if not server_id or result is None:
-        app.logger.warning("send-result: Missing server_id or result")
-        return jsonify({"error": "server_id and result are required"}), 400
+    password = data.get("password")  # 🔑 агент тепер має відправляти пароль
+
+    if not server_id or result is None or not password:
+        return jsonify({"error": "server_id, result and password are required"}), 400
+
+    server = Server.query.get(server_id)
+    if not server:
+        return jsonify({"error": "Server not found"}), 404
+
+    if server.agent_password != password:  # 🔒 перевірка паролю
+        app.logger.warning(f"send-result: Wrong password for server_id {server_id}")
+        return jsonify({"error": "Invalid password"}), 403
 
     res = CommandResult(server_id=server_id, result=result)
     db.session.add(res)

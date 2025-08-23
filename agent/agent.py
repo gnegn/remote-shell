@@ -18,8 +18,10 @@ CONFIG_FILE = sys.argv[1] if len(sys.argv) > 1 else "agent_config.json"
 DEFAULT_CONFIG = {
     "server_url": "http://10.0.2.2:8000",
     "server_id": 1,
+    "password": "",   
     "poll_interval": 2
 }
+
 
 if not os.path.exists(CONFIG_FILE):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -48,7 +50,11 @@ def get_command():
 def send_result(result):
     try:
         url = f"{SERVER_URL}/api/send-result"
-        payload = {"server_id": SERVER_ID, "result": result}
+        payload = {
+            "server_id": SERVER_ID,
+            "password": config.get("password"),  
+            "result": result
+        }
         r = requests.post(url, json=payload, timeout=5)
         if r.status_code == 201:
             log.info("Result sent successfully")

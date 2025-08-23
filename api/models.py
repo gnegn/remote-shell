@@ -11,9 +11,9 @@ class Server(db.Model):
     usable_by = db.Column(db.String(500), default='')         
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.String(100), nullable=False)   
-    one_c_name = db.Column(db.String(200), nullable=True)   
-     
-
+    one_c_name = db.Column(db.String(200), nullable=True)    
+    agent_password = db.Column(db.String(64), nullable=False)  
+    
 class PendingCommand(db.Model):
     __tablename__ = 'pending_commands'
     id = db.Column(db.Integer, primary_key=True)

@@ -18,51 +18,77 @@ def load_config():
 config = load_config()
 API_URL = config.get("api_url", "http://localhost:8000")
 
+# ----------------- Session & Auth -----------------
+session = requests.Session()
+auth = None  # (username, password)
+
+def login():
+    """Login user and set global auth"""
+    global auth
+    username = input("Username: ")
+    password = input("Password: ")
+    
+    resp = session.get(f"{API_URL}/api/servers", auth=(username, password))
+    if resp.status_code == 200:
+        print("Login successful!")
+        auth = (username, password)
+    else:
+        print(f"Login failed: {resp.status_code} - {resp.text}")
+        login()
+
+# ----------------- Helpers -----------------
+def safe_print_json(resp):
+    try:
+        print(json.dumps(resp.json(), indent=4))
+    except Exception:
+        print("Response is not valid JSON:")
+        print(resp.text)
+
 # ----------------- Servers -----------------
 def list_servers():
-    resp = requests.get(f"{API_URL}/api/servers")
-    print(json.dumps(resp.json(), indent=4))
+    resp = session.get(f"{API_URL}/api/servers", auth=auth)
+    safe_print_json(resp)
 
-def get_server(server_id):
-    resp = requests.get(f"{API_URL}/api/servers/{server_id}")
-    print(json.dumps(resp.json(), indent=4))
+def get_server():
+    server_id = int(input("Server ID: "))
+    resp = session.get(f"{API_URL}/api/servers/{server_id}", auth=auth)
+    safe_print_json(resp)
 
 def create_server():
     name = input("Server name: ")
     remote_url = input("Remote URL: ")
     created_by = input("Created by: ")
     one_c_name = input("1C name (optional): ")
-    usable_by = input("Usable by (optional): ")
 
     data = {
         "name": name,
         "remote-url": remote_url,
         "created-by": created_by,
         "1c-name": one_c_name,
-        "usable-by": usable_by
     }
 
-    resp = requests.post(f"{API_URL}/api/servers", json=data)
-    print(json.dumps(resp.json(), indent=4))
+    resp = session.post(f"{API_URL}/api/servers", json=data, auth=auth)
+    safe_print_json(resp)
 
 # ----------------- Commands -----------------
 def send_command():
-    server_id = input("Server ID: ")
+    server_id = int(input("Server ID: "))
     command = input("Command (leave blank if using script): ")
     script = input("Script filename (optional): ")
 
     data = {
-        "server_id": int(server_id),
+        "server_id": server_id,
         "command": command if command else None,
         "script": script if script else None
     }
 
-    resp = requests.post(f"{API_URL}/api/send-command", json=data)
-    print(json.dumps(resp.json(), indent=4))
+    resp = session.post(f"{API_URL}/api/send-command", json=data, auth=auth)
+    safe_print_json(resp)
 
-def get_command(server_id):
-    resp = requests.get(f"{API_URL}/api/get-command/{server_id}")
-    print(json.dumps(resp.json(), indent=4))
+def get_command():
+    server_id = int(input("Server ID: "))
+    resp = session.get(f"{API_URL}/api/get-command/{server_id}", auth=auth)
+    safe_print_json(resp)
 
 # ----------------- Results -----------------
 def send_result():
@@ -76,49 +102,98 @@ def send_result():
         "result": result
     }
 
-    resp = requests.post(f"{API_URL}/api/send-result", json=data)
-    print(json.dumps(resp.json(), indent=4))
+    resp = session.post(f"{API_URL}/api/send-result", json=data)
+    safe_print_json(resp)
 
-def get_result(server_id):
-    resp = requests.get(f"{API_URL}/api/get-result/{server_id}")
-    print(json.dumps(resp.json(), indent=4))
+def get_result():
+    server_id = int(input("Server ID: "))
+    resp = session.get(f"{API_URL}/api/get-result/{server_id}")
+    safe_print_json(resp)
+
+# ----------------- Users -----------------
+def list_users():
+    resp = session.get(f"{API_URL}/api/users", auth=auth)
+    safe_print_json(resp)
+
+def create_user():
+    username = input("Username: ")
+    password = input("Password: ")
+    role = input("Role (admin/user): ")
+
+    data = {
+        "username": username,
+        "password": password,
+        "role": role
+    }
+
+    resp = session.post(f"{API_URL}/api/users", json=data, auth=auth)
+    safe_print_json(resp)
+
+def update_user_password():
+    username = input("Username: ")
+    new_password = input("New password: ")
+
+    data = {"password": new_password}
+    resp = session.put(f"{API_URL}/api/users/{username}/password", json=data, auth=auth)
+    safe_print_json(resp)
+
+def delete_user():
+    username = input("Username: ")
+    resp = session.delete(f"{API_URL}/api/users/{username}", auth=auth)
+    safe_print_json(resp)
+
+# ----------------- User Servers -----------------
+def list_user_servers():
+    resp = session.get(f"{API_URL}/api/user-servers", auth=auth)
+    safe_print_json(resp)
+
+def assign_server_to_user():
+    server_id = int(input("Server ID to assign: "))
+    resp = session.post(f"{API_URL}/api/assign-server", json={"server_id": server_id}, auth=auth)
+    safe_print_json(resp)
+
+def remove_server_from_user():
+    server_id = int(input("Server ID to remove: "))
+    resp = session.delete(f"{API_URL}/api/unassign-server/{server_id}", auth=auth)
+    safe_print_json(resp)
 
 # ----------------- Menu -----------------
+MENU_ACTIONS = {
+    "1": ("List servers", list_servers),
+    "2": ("Get server by ID", get_server),
+    "3": ("Create server", create_server),
+    "4": ("Send command", send_command),
+    "5": ("Get command for agent", get_command),
+    "6": ("Send result", send_result),
+    "7": ("Get result", get_result),
+    "8": ("List users", list_users),
+    "9": ("Create user", create_user),
+    "10": ("Update user password", update_user_password),
+    "11": ("Delete user", delete_user),
+    "12": ("List my servers", list_user_servers),
+    "13": ("Assign server to me", assign_server_to_user),
+    "14": ("Remove server from me", remove_server_from_user),
+    "0": ("Exit", None)
+}
+
 def menu():
     while True:
         print("\n--- API CLI ---")
-        print("1. List servers")
-        print("2. Get server by ID")
-        print("3. Create server")
-        print("4. Send command")
-        print("5. Get command for agent")
-        print("6. Send result")
-        print("7. Get result")
-        print("0. Exit")
+        for key, (desc, _) in MENU_ACTIONS.items():
+            print(f"{key}. {desc}")
 
-        choice = input("Choose option: ")
-
-        if choice == "1":
-            list_servers()
-        elif choice == "2":
-            server_id = int(input("Server ID: "))
-            get_server(server_id)
-        elif choice == "3":
-            create_server()
-        elif choice == "4":
-            send_command()
-        elif choice == "5":
-            server_id = int(input("Server ID: "))
-            get_command(server_id)
-        elif choice == "6":
-            send_result()
-        elif choice == "7":
-            server_id = int(input("Server ID: "))
-            get_result(server_id)
-        elif choice == "0":
-            break
-        else:
+        choice = input("Choose option: ").strip()
+        action = MENU_ACTIONS.get(choice)
+        if not action:
             print("Invalid choice!")
+            continue
+
+        if choice == "0":
+            break
+
+        _, func = action
+        func()
 
 if __name__ == "__main__":
+    login()
     menu()

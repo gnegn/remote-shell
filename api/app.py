@@ -134,7 +134,6 @@ def get_command_for_agent(server_id):
             "is_script": cmd.is_script
         }
 
-        # Якщо це скрипт, додаємо вміст скрипта:
         if cmd.is_script:
             script_path = os.path.join("etc", "scripts", cmd.command)
             try:

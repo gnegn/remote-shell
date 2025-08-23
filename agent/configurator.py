@@ -130,7 +130,7 @@ class ConfigManagerApp:
             "server_url": "http://10.0.2.2:8000/",
             "server_id": "1",
             "poll_interval": "5",
-            "secret": ""
+            "password": ""
         }
         if data:
             fields.update({k: str(v) for k, v in data.items()})

@@ -1,0 +1,124 @@
+import requests
+import json
+import os
+
+CONFIG_FILE = "helmsman_config.json"
+
+# ----------------- Config -----------------
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    else:
+        default_config = {"api_url": "http://localhost:8000"}
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(default_config, f, indent=4)
+        return default_config
+
+config = load_config()
+API_URL = config.get("api_url", "http://localhost:8000")
+
+# ----------------- Servers -----------------
+def list_servers():
+    resp = requests.get(f"{API_URL}/api/servers")
+    print(json.dumps(resp.json(), indent=4))
+
+def get_server(server_id):
+    resp = requests.get(f"{API_URL}/api/servers/{server_id}")
+    print(json.dumps(resp.json(), indent=4))
+
+def create_server():
+    name = input("Server name: ")
+    remote_url = input("Remote URL: ")
+    created_by = input("Created by: ")
+    one_c_name = input("1C name (optional): ")
+    usable_by = input("Usable by (optional): ")
+
+    data = {
+        "name": name,
+        "remote-url": remote_url,
+        "created-by": created_by,
+        "1c-name": one_c_name,
+        "usable-by": usable_by
+    }
+
+    resp = requests.post(f"{API_URL}/api/servers", json=data)
+    print(json.dumps(resp.json(), indent=4))
+
+# ----------------- Commands -----------------
+def send_command():
+    server_id = input("Server ID: ")
+    command = input("Command (leave blank if using script): ")
+    script = input("Script filename (optional): ")
+
+    data = {
+        "server_id": int(server_id),
+        "command": command if command else None,
+        "script": script if script else None
+    }
+
+    resp = requests.post(f"{API_URL}/api/send-command", json=data)
+    print(json.dumps(resp.json(), indent=4))
+
+def get_command(server_id):
+    resp = requests.get(f"{API_URL}/api/get-command/{server_id}")
+    print(json.dumps(resp.json(), indent=4))
+
+# ----------------- Results -----------------
+def send_result():
+    server_id = int(input("Server ID: "))
+    password = input("Agent password: ")
+    result = input("Result: ")
+
+    data = {
+        "server_id": server_id,
+        "password": password,
+        "result": result
+    }
+
+    resp = requests.post(f"{API_URL}/api/send-result", json=data)
+    print(json.dumps(resp.json(), indent=4))
+
+def get_result(server_id):
+    resp = requests.get(f"{API_URL}/api/get-result/{server_id}")
+    print(json.dumps(resp.json(), indent=4))
+
+# ----------------- Menu -----------------
+def menu():
+    while True:
+        print("\n--- API CLI ---")
+        print("1. List servers")
+        print("2. Get server by ID")
+        print("3. Create server")
+        print("4. Send command")
+        print("5. Get command for agent")
+        print("6. Send result")
+        print("7. Get result")
+        print("0. Exit")
+
+        choice = input("Choose option: ")
+
+        if choice == "1":
+            list_servers()
+        elif choice == "2":
+            server_id = int(input("Server ID: "))
+            get_server(server_id)
+        elif choice == "3":
+            create_server()
+        elif choice == "4":
+            send_command()
+        elif choice == "5":
+            server_id = int(input("Server ID: "))
+            get_command(server_id)
+        elif choice == "6":
+            send_result()
+        elif choice == "7":
+            server_id = int(input("Server ID: "))
+            get_result(server_id)
+        elif choice == "0":
+            break
+        else:
+            print("Invalid choice!")
+
+if __name__ == "__main__":
+    menu()

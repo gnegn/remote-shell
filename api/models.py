@@ -8,7 +8,7 @@ from sqlalchemy import event
 def generate_unique_server_id():
     for _ in range(1000):
         candidate = random.randint(10000, 99999)
-        if not Server.query.get(candidate):
+        if not db.session.get(Server, candidate):
             return candidate
     raise ValueError("No free server IDs available")
 
@@ -22,7 +22,7 @@ class Server(db.Model):
     one_c_name = db.Column(db.String(200), nullable=True)    
     agent_password = db.Column(db.String(64), nullable=False)  
 
-@event.listens_for(Server, "init")
+@event.listens_for(Server, "before_insert")
 def assign_id(target, args, kwargs):
     if "id" not in kwargs or kwargs.get("id") is None:
         target.id = generate_unique_server_id()

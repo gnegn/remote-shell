@@ -4,7 +4,7 @@ from models import db
 from config import Config
 import routes
 from werkzeug.security import generate_password_hash
-
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)

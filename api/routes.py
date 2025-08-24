@@ -5,6 +5,9 @@ from utils import pick_field, generate_password, server_to_json
 import os
 from utils import auth_required
 from models import Server, PendingCommand, CommandResult, UserServer, db
+from models import User
+from werkzeug.security import generate_password_hash
+
 def init_app(app):
 
     # -------------------- SERVERS --------------------
@@ -21,7 +24,7 @@ def init_app(app):
 
     @app.route("/api/servers/<int:server_id>", methods=["GET"])
     @auth_required()
-    def get_server(server_id, user):  
+    def get_server(user, server_id):
         s = Server.query.get_or_404(server_id)
         return jsonify(server_to_json(s)), 200
 
@@ -155,8 +158,78 @@ def init_app(app):
         app.logger.info(f"get-result: No results found for server_id {server_id}")
         return jsonify({"result": None}), 200
 
+    #------------------- USERS --------------------------
+    # GET /api/users - list users 
+    # PUT /api/users/<username>/password - update user password 
+    # DELETE /api/users/<username> - delete user
+    # POST /api/users - create user
+
+    @app.route("/api/users", methods=["GET"])
+    @auth_required(role="admin")
+    def list_users(user):
+        users = User.query.all()
+        return jsonify([
+            {"id": u.id, "username": u.username, "role": u.role, "created_at": u.created_at.isoformat()}
+            for u in users
+        ]), 200
+    
+    @app.route("/api/users/<username>/password", methods=["PUT"])
+    @auth_required(role="admin")
+    def update_user_password(user, username):
+        data = request.get_json() or {}
+        new_password = data.get("password")
+        if not new_password:
+            return jsonify({"error": "password required"}), 400
+
+        u = User.query.filter_by(username=username).first()
+        if not u:
+            return jsonify({"error": "user not found"}), 404
+
+        u.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        return jsonify({"status": "password updated"}), 200
+
+
+    @app.route("/api/users/<username>", methods=["DELETE"])
+    @auth_required(role="admin")
+    def delete_user(user, username):
+        u = User.query.filter_by(username=username).first()
+        if not u:
+            return jsonify({"error": "user not found"}), 404
+
+        db.session.delete(u)
+        db.session.commit()
+        return jsonify({"status": "deleted"}), 200
+
+    @app.route("/api/users", methods=["POST"])
+    @auth_required(role="admin")
+    def create_user(user):
+        data = request.get_json() or {}
+        username = data.get("username")
+        password = data.get("password")
+        role = data.get("role", "user")
+
+        if not username or not password:
+            return jsonify({"error": "username and password required"}), 400
+
+        if User.query.filter_by(username=username).first():
+            return jsonify({"error": "username already exists"}), 400
+
+        new_user = User(
+            username=username,
+            password_hash=generate_password_hash(password),
+            role=role
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"status": "user created", "username": username, "role": role}), 201
 
     # -------------------- USER SERVERS --------------------
+    # GET /api/user-servers - list of servers assigned to the authenticated user
+    # POST /api/assign-server - assign a server to the authenticated user
+    # DELETE /api/unassign-server/<server_id> - unassign a server from the
+
     @app.route("/api/user-servers", methods=["GET"])
     @auth_required()
     def get_user_servers(user):

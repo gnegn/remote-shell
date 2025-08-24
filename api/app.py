@@ -13,7 +13,7 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.logger.setLevel("INFO")
 
 def create_default_admin():
-    from models import db, User  #
+    from models import db, User 
     if User.query.count() == 0:
         admin = User(
             username="admin",

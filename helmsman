@@ -76,7 +76,7 @@ def create_server():
     resp_last = session.get(f"{API_URL}/api/servers/last-created", auth=auth)
     if resp_last.status_code == 200:
         data = resp_last.json()
-        print("\n✅ Server created successfully!")
+        print("\nServer created successfully!")
         print(f"   ID: {data['id']}")
         print(f"   Name: {data['name']}")
         print(f"   Agent password: {data['agent_password']}")

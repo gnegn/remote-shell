@@ -1,8 +1,16 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-
 db = SQLAlchemy()
+import random
+from sqlalchemy import event
+
+def generate_unique_server_id():
+    for _ in range(1000):
+        candidate = random.randint(10000, 99999)
+        if not Server.query.get(candidate):
+            return candidate
+    raise ValueError("No free server IDs available")
 
 class Server(db.Model):
     __tablename__ = 'servers'
@@ -13,7 +21,12 @@ class Server(db.Model):
     created_by = db.Column(db.String(100), nullable=False)   
     one_c_name = db.Column(db.String(200), nullable=True)    
     agent_password = db.Column(db.String(64), nullable=False)  
-    
+
+@event.listens_for(Server, "init")
+def assign_id(target, args, kwargs):
+    if "id" not in kwargs or kwargs.get("id") is None:
+        target.id = generate_unique_server_id()
+
 class PendingCommand(db.Model):
     __tablename__ = 'pending_commands'
     id = db.Column(db.Integer, primary_key=True)

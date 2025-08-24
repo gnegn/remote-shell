@@ -68,7 +68,21 @@ def create_server():
     }
 
     resp = session.post(f"{API_URL}/api/servers", json=data, auth=auth)
-    safe_print_json(resp)
+    if resp.status_code != 201:
+        print("Error creating server:")
+        safe_print_json(resp)
+        return
+
+    resp_last = session.get(f"{API_URL}/api/servers/last-created", auth=auth)
+    if resp_last.status_code == 200:
+        data = resp_last.json()
+        print("\n✅ Server created successfully!")
+        print(f"   ID: {data['id']}")
+        print(f"   Name: {data['name']}")
+        print(f"   Agent password: {data['agent_password']}")
+    else:
+        print("Server created but could not fetch details.")
+        safe_print_json(resp_last)
 
 # ----------------- Commands -----------------
 def send_command():

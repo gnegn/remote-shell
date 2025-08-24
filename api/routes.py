@@ -8,9 +8,10 @@ from models import Server, PendingCommand, CommandResult, UserServer, db
 def init_app(app):
 
     # -------------------- SERVERS --------------------
-    # GET /api/servers - список серверів 
-    # GET /api/servers/<id> - інформація про сервер
-    # POST /api/servers - створити сервер
+    # GET /api/servers - list of servers
+    # GET /api/servers/<id> - server information
+    # POST /api/servers - create server
+    # GET /api/servers/last-created - get the last created server
 
     @app.route("/api/servers", methods=["GET"])
     @auth_required()
@@ -52,9 +53,22 @@ def init_app(app):
         return jsonify(response), 201
 
 
+    @app.route("/api/servers/last-created", methods=["GET"])
+    @auth_required()
+    def get_last_created_server(user):
+        s = Server.query.order_by(Server.created_at.desc()).first()
+        if not s:
+            return jsonify({"error": "No servers found"}), 404
+
+        response = server_to_json(s)
+        response["agent_password"] = s.agent_password
+        return jsonify(response), 200
+
+
     # -------------------- COMMANDS --------------------
-    # POST /api/send-command - створити команду
-    # GET /api/get-command/<server_id> - отримати команду для агента
+    # POST /api/send-command - create a command
+    # GET /api/get-command/<server_id> - get a command for the agent
+
 
     @app.route("/api/send-command", methods=["POST"])
     @auth_required()
@@ -82,7 +96,7 @@ def init_app(app):
         return jsonify({"status": "ok", "command_id": cmd.id}), 201
 
     @app.route("/api/get-command/<int:server_id>", methods=["GET"])
-    def get_command_for_agent(server_id):  # <- без user, бо це агент
+    def get_command_for_agent(server_id): 
         cmd = PendingCommand.query.filter_by(server_id=server_id).order_by(PendingCommand.created_at.asc()).first()
         if cmd:
             payload = {"command_id": cmd.id, "command": cmd.command, "is_script": cmd.is_script}
@@ -101,11 +115,12 @@ def init_app(app):
 
 
     # -------------------- RESULTS --------------------
-    # POST /api/send-result - надіслати результат виконання команди
-    # GET /api/get-result/<server_id> - отримати останній результат виконання
+    # POST /api/send-result - send the result of command execution
+    # GET /api/get-result/<server_id> - get the latest command execution result
+
 
     @app.route("/api/send-result", methods=["POST"])
-    def send_result():  # <- без user, бо це агент
+    def send_result():  
         data = request.get_json() or {}
         app.logger.info(f"Received send-result request with data: {data}")
 
@@ -131,7 +146,7 @@ def init_app(app):
         return jsonify({"status": "Result stored"}), 201
 
     @app.route("/api/get-result/<int:server_id>", methods=["GET"])
-    def get_result(server_id):  # <- без user, бо це агент
+    def get_result(server_id): 
         app.logger.info(f"get-result: Request for server_id {server_id}")
         res = CommandResult.query.filter_by(server_id=server_id).order_by(CommandResult.created_at.desc()).first()
         if res:
@@ -162,7 +177,6 @@ def init_app(app):
         if not server:
             return jsonify({"error": "Server not found"}), 404
 
-        # перевіряємо, чи вже є зв'язок
         existing = UserServer.query.filter_by(user_id=user.id, server_id=server_id).first()
         if existing:
             return jsonify({"status": "already assigned"}), 200

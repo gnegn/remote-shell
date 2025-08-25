@@ -7,6 +7,10 @@ from utils import auth_required
 from models import Server, PendingCommand, CommandResult, UserServer, db
 from models import User
 from werkzeug.security import generate_password_hash
+import jwt
+from datetime import datetime, timedelta
+from flask import current_app
+
 
 def init_app(app):
 
@@ -271,3 +275,31 @@ def init_app(app):
         db.session.commit()
         return jsonify({"status": "unassigned"}), 200
 
+
+    # -------------------- AUTH --------------------
+    # POST /api/login - user login, returns JWT token
+
+    @app.route("/api/login", methods=["POST"])
+    def login():
+        data = request.get_json() or {}
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            return jsonify({"error": "Missing username or password"}), 400
+
+        user = User.query.filter_by(username=username).first()
+        if not user or not user.check_password(password):
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        token = jwt.encode(
+            {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role,
+                "exp": datetime.utcnow() + timedelta(hours=2)
+            },
+            current_app.config["SECRET_KEY"],
+            algorithm="HS256"
+        )
+        return jsonify({"token": token, "role": user.role}), 200

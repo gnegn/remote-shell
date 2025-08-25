@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 import CommandList from '../components/CommandList';
+import { authFetch } from '../auth';
 
 export default function IndexPage() {
   const [serverId, setServerId] = useState('');
-  const [commandInput, setCommandInput] = useState(''); 
+  const [commandInput, setCommandInput] = useState('');
   const [result, setResult] = useState('');
+  const [loadingResult, setLoadingResult] = useState(false);
 
   const sendCommand = async () => {
     if (!serverId) {
       alert('Введіть Server ID');
       return;
     }
-
     if (!commandInput) {
       alert('Введіть команду або оберіть скрипт');
       return;
     }
 
-    // Визначаємо, чи це скрипт (шлях закінчується на .ps1)
     const payload = { server_id: parseInt(serverId) };
     if (commandInput.endsWith('.ps1')) {
       payload.script = commandInput;
@@ -26,18 +26,17 @@ export default function IndexPage() {
     }
 
     try {
-      const res = await fetch('/api/send-command', {
+      const res = await authFetch('/api/send-command', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         alert('Команда успішно надіслана!');
-        setCommandInput(''); 
+        setCommandInput('');
       } else {
-        const err = await res.json();
-        alert('Помилка: ' + JSON.stringify(err));
+        const errText = await res.text();
+        alert('Помилка: ' + errText);
       }
     } catch (e) {
       alert('Помилка при відправці: ' + e.message);
@@ -46,12 +45,16 @@ export default function IndexPage() {
 
   const fetchResult = async () => {
     if (!serverId) return;
+    setLoadingResult(true);
     try {
-      const res = await fetch(`/api/get-result/${serverId}`);
+      const res = await authFetch(`/api/get-result/${serverId}`);
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
       const data = await res.json();
       setResult(data.result || '');
     } catch (e) {
       alert('Помилка при отриманні результату: ' + e.message);
+    } finally {
+      setLoadingResult(false);
     }
   };
 
@@ -83,8 +86,8 @@ export default function IndexPage() {
 
       <div style={{ marginTop: '10px' }}>
         <button onClick={sendCommand}>Надіслати команду</button>
-        <button onClick={fetchResult} style={{ marginLeft: '10px' }}>
-          Отримати результат
+        <button onClick={fetchResult} style={{ marginLeft: '10px' }} disabled={loadingResult}>
+          {loadingResult ? 'Завантаження...' : 'Отримати результат'}
         </button>
       </div>
 

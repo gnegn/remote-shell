@@ -23,8 +23,8 @@ class Server(db.Model):
     agent_password = db.Column(db.String(64), nullable=False)  
 
 @event.listens_for(Server, "before_insert")
-def assign_id(target, args, kwargs):
-    if "id" not in kwargs or kwargs.get("id") is None:
+def assign_id(mapper, connection, target):
+    if target.id is None:
         target.id = generate_unique_server_id()
 
 class PendingCommand(db.Model):

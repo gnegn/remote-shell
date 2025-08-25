@@ -1,7 +1,15 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { clearToken } from '../auth'; // <- актуальна функція для логауту
 
-function Nav({ username }) {
+function Nav() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearToken();     // видаляємо токен через auth.js
+    navigate("/login"); // редірект на логін
+  };
+
   return (
     <nav className="main-nav underline-indicators">
       <ul className="nav-list">
@@ -21,7 +29,12 @@ function Nav({ username }) {
           </NavLink>
         </li>
       </ul>
-     
+
+      <div className="nav-logout">
+        <button onClick={handleLogout} className="logout-button">
+          Вийти
+        </button>
+      </div>
     </nav>
   );
 }

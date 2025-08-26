@@ -12,7 +12,7 @@ export default function CommandList({ setCommandInput }) {
   };
 
   return (
-    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+    <ul className="command-list">
       {commandData.map((folder, index) => (
         <li key={folder.name}>
           <div

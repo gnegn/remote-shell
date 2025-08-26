@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Nav from './Nav.jsx';
+import Header from './Header.jsx';
 import IndexPage from '../pages/IndexPage.jsx';
 import BasePage from '../pages/BasePage.jsx';
 import MonitoringPage from '../pages/MonitoringPage.jsx';
@@ -13,7 +13,7 @@ function App() {
 
   return (
     <>
-      {token && <Nav username={currentUser} />}
+      <Header />
       <Routes>
         {/* Публічна сторінка логіну */}
         <Route path="/login" element={<LoginPage />} />

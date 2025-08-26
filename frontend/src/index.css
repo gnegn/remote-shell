@@ -52,26 +52,31 @@ body {
 
 .content {
   display: grid;
-  place-content: center;
-  gap: 1rem;
+  grid-template-columns:40% 60%;
   padding-inline: 1rem;
+  height: calc(100vh - 3.5rem);
+  flex:1;
 }
 
 .command-section{
     display: flex;
     flex-direction: column;
     border-right:1px solid var(--border-color);
-    padding-right: 1rem;
-    padding-bottom: 1rem;
-    max-height: 100vh;
+    padding: 1rem 1rem 1rem 0;
     overflow: hidden;
 }
 
 .output-section{
     position: relative;
    margin: 1rem 0 1rem 1rem;
-   overflow-y: auto;
-   max-height: 100vh;
+   flex:1;
+}
+
+.output-section textarea {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  resize: none;
 }
 
 .command-server-wrapper{
@@ -82,16 +87,19 @@ body {
     overflow-y: auto;
 }
 
+.command-list{
+  overflow: auto;
+}
+
 /* ----------- Хедер ----------- */
 
-header {
+.header {
     background-color:var(--bg-muted);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    position: relative;
+    justify-content: center;
     border-bottom: 1px solid var(--border-color);
-    padding:.5rem 1rem ;
+    height: 3.5rem;
 }
 
 .header-left {
@@ -205,13 +213,6 @@ input{
     padding-block: 1rem;
 }
 
-.input-wrapper{
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap:1rem;
-}
-
 .submit-button, .refresh-button {
     padding:.25rem 1rem;
 }
@@ -228,6 +229,11 @@ input{
   padding: 16px;
   font-size: 14px;
   color: #555;
+}
+
+.table-message svg {
+  width: 10rem;
+  height: 10rem;
 }
 
 .server-table {
@@ -277,7 +283,7 @@ input{
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.125rem 0.4rem;
+  padding: 0.3rem 0.5rem;
   font-weight: bold;
   font-size: var(--font-size-small);
   text-transform: uppercase;
@@ -297,6 +303,7 @@ input{
 .nested-list {
   display: flex;
   flex-direction: column;
+  text-align: start;
   gap: 0.5rem;
   border-left: 2px dashed var(--border-dashed);
   transition: max-height 0.2s ease-out;
@@ -307,15 +314,45 @@ input{
 }
 
 .nested-list li {
-  padding: 0.3rem;
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-small);
   cursor: pointer;
-}
-
-.command-wrapper ul{
-   max-width: 20rem;
 }
 
 .icon {
   width:1.4rem;
   height:1.4rem;
+}
+
+.button-wrapper{
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.button-wrapper button {
+  padding: .25rem .75rem;
+}
+
+.input-wrapper{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.command-wrapper{
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  flex: 1;
+}
+
+.command-list,
+.server-list {
+  background-color: var(--bg-muted);
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  overflow-y: auto;
 }

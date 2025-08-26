@@ -302,4 +302,9 @@ def init_app(app):
             current_app.config["SECRET_KEY"],
             algorithm="HS256"
         )
+
+        # змусити token бути str, а не bytes
+        if isinstance(token, bytes):
+            token = token.decode("utf-8")
+
         return jsonify({"token": token, "role": user.role}), 200

@@ -1,0 +1,30 @@
+[33m2322b04[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m frontend auth
+[33ma7b322a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m it works ig
+[33mbacd9c2[m kinda working auth
+[33m2515fd5[m stable
+[33m634a06f[m minor fixes
+[33mbb9f348[m usable_by removed
+[33m2b9d756[m stable
+[33me947209[m work with api
+[33m566327a[m configurator creates correct files
+[33mff80ecc[m password protection
+[33me78e3e8[m agent configurator
+[33mc7cea9c[m powershell support
+[33m83764a9[m agent
+[33mdc5cf10[m add command list
+[33m35576fb[m add styling basePage
+[33m1f73510[m push pull command
+[33m34f32a2[m database mounted as docker volume for aws instance deploy
+[33m1b776cf[m base mounted as docker volume
+[33m485fe30[m Merge pull request #5 from sigilvayne/dev
+[33me145fbc[m Merge pull request #4 from sigilvayne/dev
+[33mb743023[m docker image workflow
+[33mbff77e3[m docker image workflow
+[33m0a9671f[m docker init in github action
+[33m1a7495e[m infra
+[33mb872c6f[m base
+[33me73ffbd[m[33m ([m[1;31morigin/front[m[33m)[m add navigation
+[33mac90089[m Merge pull request #1 from sigilvayne/dev
+[33m86ae7c3[m frontend added
+[33meeb14b6[m Normalize line endings to LF
+[33m5c6401b[m initial commit

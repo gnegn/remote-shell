@@ -25,12 +25,13 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-        if (data.token) {
-        setToken(data.token); 
-          window.location.href = "/";  
-        } else {
-            throw new Error("Token not received");
-        }
+      const token = data.token || data.access_token; 
+      if (token) {
+        setToken(token);
+        window.location.href = "/";
+      } else {
+        throw new Error("Token not received");
+      }
 
 
     } catch (err) {

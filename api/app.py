@@ -4,7 +4,7 @@ from models import db
 from config import Config
 import routes
 from werkzeug.security import generate_password_hash
-import os
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -13,25 +13,22 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.logger.setLevel("INFO")
 
 def create_default_admin():
-    from models import db, User
-    admin_user = User.query.filter_by(username="admin").first()
-    if not admin_user:
+    from models import User
+
+    if not User.query.filter_by(username="admin").first():
         admin = User(
             username="admin",
             password_hash=generate_password_hash("admin"),
             role="admin"
         )
         db.session.add(admin)
-        db.session.commit()
-        print("Default admin created: username=admin, password=admin")
+        try:
+            db.session.commit()
+            print("Default admin created: username=admin, password=admin")
+        except IntegrityError:
+            db.session.rollback()
+            print("Default admin already exists")
     else:
         print("Default admin already exists")
 
-with app.app_context():
-    db.create_all()
-    create_default_admin()
-
 routes.init_app(app)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), debug=True)

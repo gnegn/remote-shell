@@ -8,7 +8,7 @@ import LoginPage from '../pages/LoginPage.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function App() {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("authToken");
   const currentUser = token ? "Владислав" : null;
 
   return (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import { authFetch, clearToken } from "../auth"; // <- коректні назви
+import { authFetch, clearToken } from "../auth"; 
 
 function formatExactDate(isoString) {
   const date = new Date(isoString);

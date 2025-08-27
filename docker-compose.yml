@@ -3,8 +3,8 @@ version: '3.8'
 services:
   api:
     build: ./api
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     networks:
       - app-network
     volumes:
@@ -12,17 +12,28 @@ services:
 
   frontend:
     build: ./frontend
-    ports:
-      - "5173:5173"
-    depends_on:
-      - api
+    # коли контейнер стартує, він одразу збере білд
+    command: sh -c "npm run build"
+    volumes:
+      - frontend_build:/app/dist
     networks:
       - app-network
-    environment:
-      - VITE_BACKEND_URL=http://api:8000
+
+  nginx:
+    build: ./nginx
+    volumes:
+      - frontend_build:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - app-network
 
 volumes:
   sqlite_data:
+  frontend_build:
 
 networks:
   app-network:

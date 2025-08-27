@@ -12,7 +12,6 @@ services:
 
   frontend:
     build: ./frontend
-    # коли контейнер стартує, він одразу збере білд
     command: sh -c "npm run build"
     volumes:
       - frontend_build:/app/dist
@@ -30,6 +29,17 @@ services:
       - frontend
     networks:
       - app-network
+
+  console:
+    build: ./console
+    stdin_open: true   
+    tty: true          
+    volumes:
+      - ./console:/app
+    networks:
+      - app-network
+    depends_on:
+      - api
 
 volumes:
   sqlite_data:

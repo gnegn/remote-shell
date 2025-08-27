@@ -11,7 +11,7 @@ export default function UserServers({ setServerId }) {
       try {
         const res = await fetch('/api/user-servers', {
           headers: {
-            "Authorization": "Bearer " + localStorage.getItem("token")
+            "Authorization": "Bearer " + localStorage.getItem("authToken")
           }
         });
         if (!res.ok) throw new Error("Failed to fetch servers");

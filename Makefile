@@ -24,3 +24,5 @@ logs-%:
 # Run the console (CLI) service
 console:
 	docker compose run --rm console
+restart:
+	docker compose restart

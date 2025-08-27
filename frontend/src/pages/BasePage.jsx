@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import { authFetch, clearToken } from "../auth"; 
+import { authFetch } from "../auth";
 
 function formatExactDate(isoString) {
   const date = new Date(isoString);
@@ -16,25 +16,28 @@ function formatExactDate(isoString) {
 
 export default function BasePage() {
   const [servers, setServers] = useState([]);
+  const [userServers, setUserServers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    remoteUrl: "",
-    usableBy: "",
-    createdBy: "",
-    oneCName: "",
-  });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchServers = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await authFetch("/api/servers");
-      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-      const data = await res.json();
-      setServers(data);
+      const [allRes, userRes] = await Promise.all([
+        authFetch("/api/servers"),
+        authFetch("/api/user-servers"),
+      ]);
+
+      if (!allRes.ok) throw new Error(`Servers fetch failed: ${allRes.status}`);
+      if (!userRes.ok) throw new Error(`User servers fetch failed: ${userRes.status}`);
+
+      const allData = await allRes.json();
+      const userData = await userRes.json();
+
+      setServers(allData);
+      setUserServers(userData.map((s) => s.id));
     } catch (e) {
       setError(e.message || "Unknown error");
     } finally {
@@ -46,103 +49,117 @@ export default function BasePage() {
     fetchServers();
   }, []);
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const assignServer = async (serverId) => {
+    try {
+      const res = await authFetch("/api/assign-server", {
+        method: "POST",
+        body: JSON.stringify({ server_id: serverId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to assign");
 
-const onSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-
-  if (!form.name.trim() || !form.remoteUrl.trim() || !form.createdBy.trim()) {
-    Swal.fire({
-      icon: "warning",
-      title: "Missing fields",
-      text: "Please fill all required fields",
-    });
-    return;
-  }
-
-  setSubmitting(true);
-  try {
-    const payload = {
-      name: form.name.trim(),
-      "remote-url": form.remoteUrl.trim(),
-      "created-by": form.createdBy.trim(),
-      "1c-name": form.oneCName.trim() || null,
-      "usable-by": form.usableBy.trim() || null,
-    };
-
-    const res = await authFetch("/api/servers", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || "Failed to add server");
+      Swal.fire({
+        icon: "success",
+        title: "Assigned",
+        text: `Server ${serverId} assigned to you`,
+      });
+      await fetchServers();
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Error", text: e.message });
     }
+  };
 
-    await fetchServers();
-    setForm({ name: "", remoteUrl: "", usableBy: "", createdBy: "", oneCName: "" });
-  } catch (e) {
-    setError(e.message || "Unknown error");
-  } finally {
-    setSubmitting(false);
-  }
-};
+  const unassignServer = async (serverId) => {
+    try {
+      const res = await authFetch(`/api/unassign-server/${serverId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to unassign");
+
+      Swal.fire({
+        icon: "success",
+        title: "Unassigned",
+        text: `Server ${serverId} unassigned`,
+      });
+      await fetchServers();
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Error", text: e.message });
+    }
+  };
+
+  const openAddServerModal = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: "Додати новий сервер",
+      html:
+        `<input id="swal-name" class="swal2-input" placeholder="Name (eng)">` +
+        `<input id="swal-remoteUrl" class="swal2-input" placeholder="Remote URL">` +
+        `<input id="swal-createdBy" class="swal2-input" placeholder="Created by (your name, eng)">` +
+        `<input id="swal-oneCName" class="swal2-input" placeholder="1C name (legal, ukr)">`,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Додати сервер",
+      cancelButtonText: "Відмінити",
+      preConfirm: () => {
+        const name = document.getElementById("swal-name").value.trim();
+        const remoteUrl = document.getElementById("swal-remoteUrl").value.trim();
+        const createdBy = document.getElementById("swal-createdBy").value.trim();
+        const oneCName = document.getElementById("swal-oneCName").value.trim();
+
+        if (!name || !remoteUrl || !createdBy) {
+          Swal.showValidationMessage("Будь ласка, заповніть обов'язкові поля");
+          return null;
+        }
+        return { name, remoteUrl, createdBy, oneCName };
+      },
+    });
+
+    if (formValues) {
+      setSubmitting(true);
+      try {
+        const payload = {
+          name: formValues.name,
+          "remote-url": formValues.remoteUrl,
+          "created-by": formValues.createdBy,
+          "1c-name": formValues.oneCName || null,
+        };
+
+        const res = await authFetch("/api/servers", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || "Failed to add server");
+        }
+
+        Swal.fire({
+          icon: "success",
+          title: "Сервер додано",
+        });
+
+        await fetchServers();
+      } catch (e) {
+        Swal.fire({ icon: "error", title: "Помилка", text: e.message });
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  };
 
   return (
     <div className="container">
       <h1 className="h1-title">База серверів</h1>
 
-      <form onSubmit={onSubmit} className="flex-form">
-        <div className="input-wrapper">
-          <input
-            name="name"
-            value={form.name}
-            onChange={onChange}
-            placeholder="Name (eng)"
-            className="border rounded px-3 py-2 w-full"
-          />
-          <input
-            name="remoteUrl"
-            value={form.remoteUrl}
-            onChange={onChange}
-            placeholder="Remote URL (where agent polls, e.g. https://center.example/api)"
-            className="border rounded px-3 py-2 w-full"
-          />
-          <input
-            name="usableBy"
-            value={form.usableBy}
-            onChange={onChange}
-            placeholder="Usable by (comma-separated usernames)"
-            className="border rounded px-3 py-2 w-full"
-          />
-          <input
-            name="createdBy"
-            value={form.createdBy}
-            onChange={onChange}
-            placeholder="Created by (your name, eng)"
-            className="border rounded px-3 py-2 w-full"
-          />
-          <input
-            name="oneCName"
-            value={form.oneCName}
-            onChange={onChange}
-            placeholder="1C name (legal, ukr)"
-            className="border rounded px-3 py-2 w-full"
-          />
-        </div>
-
-        <div className="flex-buttons">
-          <button type="submit" disabled={submitting} className="submit-button">
-            {submitting ? "Adding..." : "Add server"}
-          </button>
-          <button type="button" onClick={fetchServers} className="refresh-button">
-            Refresh
-          </button>
-          {error && <div>{error}</div>}
-        </div>
-      </form>
+      <div className="mb-4">
+        <button
+          onClick={openAddServerModal}
+          className="px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Додати сервер
+        </button>
+      </div>
 
       <div className="table-container">
         {loading ? (
@@ -158,28 +175,51 @@ const onSubmit = async (e) => {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Remote URL</th>
-                <th>Usable by</th>
+                <th>Users</th>
                 <th>Created at</th>
                 <th>Created by</th>
                 <th>1C name</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {servers.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.id}</td>
-                  <td>{s.name}</td>
-                  <td className="break-word">{s["remote-url"]}</td>
-                  <td>{s["usable-by"]}</td>
-                  <td>{formatExactDate(s["created-at"])}</td>
-                  <td>{s["created-by"]}</td>
-                  <td>{s["1c-name"]}</td>
-                </tr>
-              ))}
+              {servers.map((s) => {
+                const isAssigned = userServers.includes(s.id);
+                return (
+                  <tr key={s.id}>
+                    <td>{s.id}</td>
+                    <td>{s.name}</td>
+                    <td className="break-word">{s["remote-url"]}</td>
+                    <td>{s.users && s.users.length > 0 ? s.users.join(", ") : "—"}</td>
+                    <td>{formatExactDate(s["created-at"])}</td>
+                    <td>{s["created-by"]}</td>
+                    <td>{s["1c-name"]}</td>
+                    <td>
+                      {isAssigned ? (
+                        <button
+                          onClick={() => unassignServer(s.id)}
+                          className="px-2 py-1 bg-red-600 text-white rounded"
+                        >
+                          − Unassign
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => assignServer(s.id)}
+                          className="px-2 py-1 bg-green-600 text-white rounded"
+                        >
+                          + Assign
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {error && <div className="text-red-600 mt-2">{error}</div>}
     </div>
   );
 }

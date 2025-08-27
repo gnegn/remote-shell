@@ -6,6 +6,8 @@ from flask import request, jsonify
 from models import User
 import jwt
 from flask import request, jsonify, current_app
+from models import UserServer, User
+
 
 def pick_field(data, *variants):
     for v in variants:
@@ -25,7 +27,8 @@ def server_to_json(s):
         "created-at": s.created_at.isoformat() if s.created_at else None,
         "created-by": s.created_by,
         "1c-name": s.one_c_name,
-        "agent_password": s.agent_password
+        "agent_password": s.agent_password,
+         "users": [us.user.username for us in UserServer.query.filter_by(server_id=s.id).all()]
     }
 
 

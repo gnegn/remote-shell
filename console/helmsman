@@ -25,8 +25,8 @@ auth = None  # (username, password)
 def login():
     """Login user and set global auth"""
     global auth
-    username = input("Username: ")
-    password = input("Password: ")
+    username = input("Username: ").strip()
+    password = input("Password: ").strip()
     
     resp = session.get(f"{API_URL}/api/servers", auth=(username, password))
     if resp.status_code == 200:

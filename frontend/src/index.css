@@ -33,6 +33,7 @@ h1,h2,h3,h4,h5{
 }
 
 .h2-margin{
+  text-align: start;
     padding-bottom:.5rem;
     font-size:var(--font-size-big);
 }
@@ -193,7 +194,7 @@ li{
     list-style: none;
 }
 input{
-    padding: .25rem 0 .25rem .25rem;
+    padding: .5rem;
 }
 
 .h1-title{
@@ -228,7 +229,6 @@ input{
 .table-message {
   padding: 16px;
   font-size: 14px;
-  color: #555;
 }
 
 .table-message svg {
@@ -324,12 +324,32 @@ input{
   height:1.4rem;
 }
 
+/*------------------- Buttons ------------------- */
+
 .button-wrapper{
   display: flex;
-  justify-content: center;
   gap: 1rem;
   margin-bottom: 1rem;
 }
+
+.button-wrapper button{
+  display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color-light);
+    font-size: var(--font-size-small);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+
+}
+
+.send-btn{flex:6}
+
+.clear-btn{flex:4}
+
 
 .button-wrapper button {
   padding: .25rem .75rem;
@@ -349,10 +369,31 @@ input{
   flex: 1;
 }
 
+.command-input{
+  border: 1px solid var(--border-color);
+}
+
 .command-list,
 .server-list {
   background-color: var(--bg-muted);
   border: 1px solid var(--border-color);
   padding: 1rem;
   overflow-y: auto;
+}
+
+.server-item {
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 2px 0;
+}
+
+.server-item:hover {
+  background: #f0f0f0;
+}
+
+.server-item.active {
+  background: #007bff;
+  color: white;
+  font-weight: bold;
 }

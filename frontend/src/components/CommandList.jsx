@@ -13,6 +13,7 @@ export default function CommandList({ setCommandInput }) {
 
   return (
     <ul className="command-list">
+      <h2 className="h2-margin">Команди</h2>
       {commandData.map((folder, index) => (
         <li key={folder.name}>
           <div

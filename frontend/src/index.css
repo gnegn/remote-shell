@@ -194,6 +194,7 @@ li{
     list-style: none;
 }
 input{
+    border: 1px solid var(--border-color);
     padding: .5rem;
 }
 
@@ -260,7 +261,6 @@ input{
   border-top: 1px solid #eee;
   font-size: 14px;
   color: #444;
-  vertical-align: top;
 }
 
 .server-table tbody tr:hover {
@@ -326,6 +326,17 @@ input{
 
 /*------------------- Buttons ------------------- */
 
+button{
+  background-color: var(--primary-color-light);
+    font-size: var(--font-size-small);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+    padding: .5rem;
+}
+
 .button-wrapper{
   display: flex;
   gap: 1rem;
@@ -333,27 +344,35 @@ input{
 }
 
 .button-wrapper button{
-  display: flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--primary-color-light);
-    font-size: var(--font-size-small);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-weight: bold;
+    padding-block: .25rem;
+}
 
+.server-add-btn{
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    padding-inline: .5rem;
+}
+
+.unassign-btn,
+.assign-btn {
+  display: flex;
+  align-items: center;
+  padding:.25rem .5rem;
+  gap: .5rem;
+}
+
+.logout-btn{
+    padding: .5rem 1.5rem;
+    border-radius: 16px;
 }
 
 .send-btn{flex:6}
 
 .clear-btn{flex:4}
-
-
-.button-wrapper button {
-  padding: .25rem .75rem;
-}
 
 .input-wrapper{
   display: flex;
@@ -384,8 +403,6 @@ input{
 .server-item {
   padding: 8px;
   cursor: pointer;
-  border-radius: 6px;
-  margin: 2px 0;
 }
 
 .server-item:hover {
@@ -393,7 +410,13 @@ input{
 }
 
 .server-item.active {
-  background: #007bff;
+  background: var(--primary-color-light);
   color: white;
   font-weight: bold;
+}
+
+.server-table-header{
+  display: flex;
+  gap: .5rem;
+  margin-block: .5rem;
 }

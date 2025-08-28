@@ -4,39 +4,37 @@ import UserServers from '../components/UserServers';
 import { Delete } from '../components/icons/jsx';
 
 export default function IndexPage() {
-  const [serverId, setServerId] = useState('');
-  const [serverName, setServerName] = useState('');
+  const [serverIds, setServerIds] = useState([]); // CHANGED: now an array for multiple selection
+  const [serverNames, setServerNames] = useState([]); // optional, for multiple names
   const [commandInput, setCommandInput] = useState('');
   const [result, setResult] = useState('');
 
   const sendCommand = async () => {
-    if (!serverId || !commandInput) {
+    if (serverIds.length === 0 || !commandInput) { // CHANGED: check array length instead of single id
       alert('Оберіть сервер і введіть команду');
       return;
     }
 
-    await fetch('/api/send-command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ server_id: parseInt(serverId), command: commandInput })
-    });
+    // CHANGED: send command to all selected servers
+    for (let id of serverIds) {
+      await fetch('/api/send-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ server_id: parseInt(id), command: commandInput })
+      });
 
-    const res = await fetch(`/api/get-result/${serverId}`);
-    const data = await res.json();
-    setResult(data.result || '');
+      const res = await fetch(`/api/get-result/${id}`);
+      const data = await res.json();
+      
+      // CHANGED: append results from multiple servers
+      setResult(prev => prev + `\n[Server ${id}]:\n${data.result || ''}\n`);
+    }
   };
 
   return (
     <div className="content">
       <div className="command-section">
         <div className="input-wrapper">
-
-          {/* Only show selected server if one is chosen */}
-          {serverId && (
-            <p className="selected-server">
-              Обраний сервер: <strong>{serverName || serverId}</strong>
-            </p>
-          )}
 
           <div className="flex">
             <h2 className='h2-margin'>Команда / Скрипт:</h2>
@@ -50,7 +48,9 @@ export default function IndexPage() {
 
           <div className="button-wrapper">
               <button onClick={sendCommand} className='send-btn'>Надіслати</button>
-              <button onClick={() => setResult('')} className='clear-btn'><Delete width="1.5rem" height="1.5rem" /></button>
+              <button onClick={() => setResult('')} className='clear-btn'>
+                <Delete width="1.5rem" height="1.5rem" />
+              </button>
           </div>
         </div>
 
@@ -59,8 +59,9 @@ export default function IndexPage() {
           <CommandList setCommandInput={setCommandInput} />
           
           <UserServers
-            setServerId={(id) => setServerId(id)}
-            setServerName={(name) => setServerName(name)}
+            setServerId={setServerIds}    // CHANGED: pass array setter for multiple selection
+            setServerName={setServerNames} // optional
+            multiple={true}                // CHANGED: optional prop to indicate multi-select
           />
           
         </div>

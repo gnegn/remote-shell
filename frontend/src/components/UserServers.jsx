@@ -4,7 +4,7 @@ import { DataNotFound } from './icons/jsx';
 export default function UserServers({ setServerId }) {
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState(null); // CHANGED: track active server
+  const [selectedIds, setSelectedIds] = useState([]); // CHANGED: track multiple servers
 
   useEffect(() => {
     const fetchServers = async () => {
@@ -38,9 +38,17 @@ export default function UserServers({ setServerId }) {
     );
   }
 
-  const handleSelect = (id) => { // CHANGED
-    setSelectedId(id);
-    setServerId(id);
+  const handleSelect = (id) => {
+    let newSelection;
+    if (selectedIds.includes(id)) {
+      // deselect if already selected
+      newSelection = selectedIds.filter(sid => sid !== id);
+    } else {
+      // add to selection
+      newSelection = [...selectedIds, id];
+    }
+    setSelectedIds(newSelection);
+    setServerId(newSelection); // send array to parent
   };
 
   return (
@@ -50,8 +58,8 @@ export default function UserServers({ setServerId }) {
       {servers.map((s) => (
         <p
           key={s.id}
-          onClick={() => handleSelect(s.id)} // CHANGED
-          className={`server-item ${selectedId === s.id ? "active" : ""}`} // CHANGED
+          onClick={() => handleSelect(s.id)}
+          className={`server-item ${selectedIds.includes(s.id) ? "active" : ""}`} // CHANGED
         >
           {s.name} ({s.one_c_name})
         </p>

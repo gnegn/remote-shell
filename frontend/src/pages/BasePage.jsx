@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { authFetch } from "../auth";
+import { Add , PersonAdd , PersonRemove } from "../components/icons/jsx";
 
 function formatExactDate(isoString) {
   const date = new Date(isoString);
@@ -150,15 +151,16 @@ export default function BasePage() {
 
   return (
     <div className="container">
-      <h1 className="h1-title">База серверів</h1>
 
-      <div className="mb-4">
+      <div className="server-table-header">
+
+        <input className="server-search-input" placeholder="Search servers..." />
+
         <button
           onClick={openAddServerModal}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Додати сервер
+          className="server-add-btn"><Add />Додати сервер
         </button>
+
       </div>
 
       <div className="table-container">
@@ -198,17 +200,11 @@ export default function BasePage() {
                       {isAssigned ? (
                         <button
                           onClick={() => unassignServer(s.id)}
-                          className="px-2 py-1 bg-red-600 text-white rounded"
-                        >
-                          − Unassign
-                        </button>
+                          className="unassign-btn"><PersonRemove /> Unassign</button>
                       ) : (
                         <button
                           onClick={() => assignServer(s.id)}
-                          className="px-2 py-1 bg-green-600 text-white rounded"
-                        >
-                          + Assign
-                        </button>
+                          className="assign-btn"><PersonAdd />Assign</button>
                       )}
                     </td>
                   </tr>

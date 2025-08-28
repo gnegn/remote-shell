@@ -31,7 +31,7 @@ function Nav() {
       </ul>
 
       <div className="nav-logout">
-        <button onClick={handleLogout} className="logout-button">
+        <button onClick={handleLogout} className="logout-btn">
           Вийти
         </button>
       </div>

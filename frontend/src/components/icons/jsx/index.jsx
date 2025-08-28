@@ -17,3 +17,6 @@ export { default as ShieldPerson } from "./ShieldPerson";
 export { default as Storage } from "./Storage";
 export { default as Terminal } from "./Terminal";
 export { default as Update } from "./Update";
+export { default as Add } from "./Add";
+export { default as PersonAdd } from "./PersonAdd";
+export { default as PersonRemove } from "./PersonRemove";

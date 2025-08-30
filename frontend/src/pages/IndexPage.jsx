@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import CommandList from '../components/CommandList';
 import UserServers from '../components/UserServers';
 import { Delete } from '../components/icons/jsx';
+import { authFetch } from '../auth';  // Імпортуємо authFetch
 
 export default function IndexPage() {
   const [serverIds, setServerIds] = useState([]); // CHANGED: now an array for multiple selection
@@ -15,19 +16,15 @@ export default function IndexPage() {
       return;
     }
 
-    // CHANGED: send command to all selected servers
+    // CHANGED: send command to all selected servers using authFetch
     for (let id of serverIds) {
-      await fetch('/api/send-command', {
+      await authFetch('/api/send-command', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ server_id: parseInt(id), command: commandInput })
       });
 
-      const res = await fetch(`/api/get-result/${id}`);
-      const data = await res.json();
-      
-      // CHANGED: append results from multiple servers
-      setResult(prev => prev + `\n[Server ${id}]:\n${data.result || ''}\n`);
+      // CHANGED: appending result message from multiple servers without fetching again
+      setResult(prev => prev + `\n[Server ${id}]: Команда надіслана.\n`);
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { authFetch } from "../auth";
-import { Add , PersonAdd , PersonRemove } from "../components/icons/jsx";
+import { Add, PersonAdd, PersonRemove } from "../components/icons/jsx";
 
 function formatExactDate(isoString) {
   const date = new Date(isoString);
@@ -21,6 +21,7 @@ export default function BasePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // Додано для збереження запиту пошуку
 
   const fetchServers = async () => {
     setLoading(true);
@@ -49,6 +50,18 @@ export default function BasePage() {
   useEffect(() => {
     fetchServers();
   }, []);
+
+  // Функція для пошуку серверів по ID, Name, Remote URL, Created by та 1C name
+  const filteredServers = servers.filter((server) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      server.name.toLowerCase().includes(query) ||
+      server["remote-url"].toLowerCase().includes(query) ||
+      server["created-by"].toLowerCase().includes(query) ||
+      server["1c-name"].toLowerCase().includes(query) ||
+      server.id.toString().includes(query) // Пошук по ID
+    );
+  });
 
   const assignServer = async (serverId) => {
     try {
@@ -151,22 +164,25 @@ export default function BasePage() {
 
   return (
     <div className="container">
-
       <div className="server-table-header">
-
-        <input className="server-search-input" placeholder="Search servers..." />
-
+        <input
+          className="server-search-input"
+          placeholder="Search servers..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)} // Оновлення запиту пошуку
+        />
         <button
           onClick={openAddServerModal}
-          className="server-add-btn"><Add />Додати сервер
+          className="server-add-btn"
+        >
+          <Add /> Додати сервер
         </button>
-
       </div>
 
       <div className="table-container">
         {loading ? (
           <div className="table-message">Loading...</div>
-        ) : servers.length === 0 ? (
+        ) : filteredServers.length === 0 ? (
           <div className="table-message">
             <p>Тут поки що пусто</p>
           </div>
@@ -185,7 +201,7 @@ export default function BasePage() {
               </tr>
             </thead>
             <tbody>
-              {servers.map((s) => {
+              {filteredServers.map((s) => {
                 const isAssigned = userServers.includes(s.id);
                 return (
                   <tr key={s.id}>
@@ -200,11 +216,17 @@ export default function BasePage() {
                       {isAssigned ? (
                         <button
                           onClick={() => unassignServer(s.id)}
-                          className="unassign-btn"><PersonRemove /> Unassign</button>
+                          className="unassign-btn"
+                        >
+                          <PersonRemove /> Unassign
+                        </button>
                       ) : (
                         <button
                           onClick={() => assignServer(s.id)}
-                          className="assign-btn"><PersonAdd />Assign</button>
+                          className="assign-btn"
+                        >
+                          <PersonAdd />Assign
+                        </button>
                       )}
                     </td>
                   </tr>

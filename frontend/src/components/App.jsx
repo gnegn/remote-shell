@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './Header.jsx';
 import IndexPage from '../pages/IndexPage.jsx';
 import BasePage from '../pages/BasePage.jsx';
@@ -8,12 +8,16 @@ import LoginPage from '../pages/LoginPage.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function App() {
+  const location = useLocation();
   const token = localStorage.getItem("authToken");
   const currentUser = token ? "Владислав" : null;
 
+  // Ховаємо Header на сторінці логіну
+  const showHeader = location.pathname !== "/login";
+
   return (
     <>
-      <Header />
+      {showHeader && <Header />}
       <Routes>
         {/* Публічна сторінка логіну */}
         <Route path="/login" element={<LoginPage />} />

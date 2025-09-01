@@ -25,4 +25,5 @@ logs-%:
 console:
 	docker compose run --rm console
 restart:
-	docker compose restart
+	docker compose down
+	docker compose up -d --build api frontend nginx

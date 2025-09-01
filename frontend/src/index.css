@@ -68,9 +68,11 @@ body {
 }
 
 .output-section{
-    position: relative;
+  display: grid;
+  overflow-y: auto;
+  grid-template-columns: repeat(3, 1fr);
    margin: 1rem 0 1rem 1rem;
-   flex:1;
+   gap: 1rem;
 }
 
 .output-section textarea {
@@ -417,6 +419,67 @@ button{
 
 .server-table-header{
   display: flex;
-  gap: .5rem;
+  gap: 1rem;
   margin-block: .5rem;
+}
+
+.output-card{
+  display: flex;
+  flex-direction: column;
+}
+
+.output-header{
+    display: flex;
+    justify-content: space-between;
+    padding: .5rem;
+    background-color: gainsboro;
+    gap: 1rem;
+}
+
+.output-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.output-header-right {
+  display: flex;
+  align-items: center;
+  padding-right: .5rem;
+}
+
+.output-body {
+  font-size: var(--font-size-small);
+  background-color: var(--bg-muted);
+  padding: 0.625rem;
+  min-height: 15rem;          
+  overflow-y: auto;       
+  white-space: pre-wrap;  
+  word-wrap: break-word;   
+  flex-grow: 1;              
+}
+
+.output-status {
+    display: block;
+    width: 100%;
+    padding:.4rem;
+    font-size: var(--font-size-small);
+    font-weight: bold;
+    text-align: center;
+
+}
+
+.output-status.running {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.output-status.complete {
+    background: #d4edda;
+    color: #28a745;
+}
+
+.output-status.error {
+    background-color: #f8d7da;
+    color: #dc3545;
 }

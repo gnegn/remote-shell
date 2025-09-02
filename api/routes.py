@@ -70,6 +70,21 @@ def init_app(app):
         response = server_to_json(s)
         response["agent_password"] = s.agent_password
         return jsonify(response), 200
+    
+    @app.route("/api/servers/<int:server_id>", methods=["DELETE"])
+    @auth_required()
+    def delete_server(user, server_id):
+        s = Server.query.get(server_id)
+        if not s:
+            return jsonify({"error": "Server not found"}), 404
+
+        try:
+            db.session.delete(s)
+            db.session.commit()
+            return jsonify({"message": f"Server {server_id} deleted successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Failed to delete server: {str(e)}"}), 500
 
 
     # -------------------- COMMANDS --------------------

@@ -23,7 +23,6 @@ session = requests.Session()
 auth = None  # (username, password)
 
 def login():
-    """Login user and set global auth"""
     global auth
     username = input("Username: ").strip()
     password = input("Password: ").strip()
@@ -172,42 +171,69 @@ def remove_server_from_user():
     safe_print_json(resp)
 
 # ----------------- Menu -----------------
-MENU_ACTIONS = {
-    "1": ("List servers", list_servers),
-    "2": ("Get server by ID", get_server),
-    "3": ("Create server", create_server),
-    "4": ("Send command", send_command),
-    "5": ("Get command for agent", get_command),
-    "6": ("Send result", send_result),
-    "7": ("Get result", get_result),
-    "8": ("List users", list_users),
-    "9": ("Create user", create_user),
-    "10": ("Update user password", update_user_password),
-    "11": ("Delete user", delete_user),
-    "12": ("List my servers", list_user_servers),
-    "13": ("Assign server to me", assign_server_to_user),
-    "14": ("Remove server from me", remove_server_from_user),
+CATEGORY_ACTIONS = {
+    "1": ("Users", {
+        "1": ("List users", list_users),
+        "2": ("Create user", create_user),
+        "3": ("Update user password", update_user_password),
+        "4": ("Delete user", delete_user),
+        "0": ("Back", None)
+    }),
+    "2": ("Servers", {
+        "1": ("List servers", list_servers),
+        "2": ("Get server by ID", get_server),
+        "3": ("Create server", create_server),
+        "0": ("Back", None)
+    }),
+    "3": ("Commands", {
+        "1": ("Send command", send_command),
+        "2": ("Get command for agent", get_command),
+        "0": ("Back", None)
+    }),
+    "4": ("Results", {
+        "1": ("Send result", send_result),
+        "2": ("Get result", get_result),
+        "0": ("Back", None)
+    }),
+    "5": ("My Servers", {
+        "1": ("List my servers", list_user_servers),
+        "2": ("Assign server to me", assign_server_to_user),
+        "3": ("Remove server from me", remove_server_from_user),
+        "0": ("Back", None)
+    }),
     "0": ("Exit", None)
 }
 
-def menu():
+def category_menu(category_dict):
     while True:
-        print("\n--- API CLI ---")
-        for key, (desc, _) in MENU_ACTIONS.items():
+        print("\n--- Choose action ---")
+        for key, (desc, _) in category_dict.items():
             print(f"{key}. {desc}")
-
-        choice = input("Choose option: ").strip()
-        action = MENU_ACTIONS.get(choice)
+        choice = input("Option: ").strip()
+        action = category_dict.get(choice)
         if not action:
             print("Invalid choice!")
             continue
-
         if choice == "0":
             break
-
         _, func = action
         func()
 
+def main_menu():
+    while True:
+        print("\n=== Main Menu ===")
+        for key, (desc, _) in CATEGORY_ACTIONS.items():
+            print(f"{key}. {desc}")
+        choice = input("Choose category: ").strip()
+        category = CATEGORY_ACTIONS.get(choice)
+        if not category:
+            print("Invalid choice!")
+            continue
+        if choice == "0":
+            break
+        _, actions = category
+        category_menu(actions)
+
 if __name__ == "__main__":
     login()
-    menu()
+    main_menu()

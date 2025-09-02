@@ -148,9 +148,19 @@ export default function BasePage() {
           throw new Error(txt || "Failed to add server");
         }
 
+        const lastRes = await authFetch("/api/servers/last-created");
+        const lastData = await lastRes.json();
+        if (!lastRes.ok) throw new Error(lastData.error || "Failed to fetch last server");
+
         Swal.fire({
           icon: "success",
           title: "Сервер додано",
+          html: `
+            <p><b>ID:</b> ${lastData.id}</p>
+            <p><b>Name:</b> ${lastData.name}</p>
+            <p><b>Password:</b> <span style="color:red">${lastData.agent_password}</span></p>
+            <p style="color:red; font-size:12px;">Збережіть цей пароль, він відобразиться лише один раз!</p>
+          `,
         });
 
         await fetchServers();

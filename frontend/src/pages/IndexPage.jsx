@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import CommandList from '../components/CommandList';
 import UserServers from '../components/UserServers';
-import { Delete, Terminal } from '../components/icons/jsx';
+import { Delete } from '../components/icons/jsx';
 import OutputCard from '../components/OutputCard';
 import { authFetch } from '../auth';
 
@@ -10,6 +10,48 @@ export default function IndexPage() {
   const [serverNames, setServerNames] = useState([]);
   const [commandInput, setCommandInput] = useState({ command: '', script: '', icon: null });
   const [outputs, setOutputs] = useState([]);
+
+  const pollResult = async (serverId, cardId) => {
+    let attempts = 0;
+    const maxAttempts = 30;
+    const interval = 1000;
+
+    const timer = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await authFetch(`/api/get-result/${serverId}`);
+        const data = await res.json();
+        if (data.result) {
+          clearInterval(timer);
+          setOutputs(prev =>
+            prev.map(card =>
+              card.id === cardId
+                ? { ...card, text: data.result, status: 'complete' }
+                : card
+            )
+          );
+        } else if (attempts >= maxAttempts) {
+          clearInterval(timer);
+          setOutputs(prev =>
+            prev.map(card =>
+              card.id === cardId
+                ? { ...card, text: 'Час очікування вичерпано', status: 'timeout' }
+                : card
+            )
+          );
+        }
+      } catch (err) {
+        clearInterval(timer);
+        setOutputs(prev =>
+          prev.map(card =>
+            card.id === cardId
+              ? { ...card, text: ` Помилка: ${err.message}`, status: 'error' }
+              : card
+          )
+        );
+      }
+    }, interval);
+  };
 
   const sendCommand = async () => {
     if (serverIds.length === 0 || !commandInput.script) {
@@ -21,39 +63,41 @@ export default function IndexPage() {
       const serverName = serverNames[index] || `Server ${id}`;
       const cardId = Date.now() + '-' + id;
 
-      // Add card in "loading" state
       setOutputs(prev => [
         ...prev,
         {
           id: cardId,
-          command: commandInput.command, // friendly name
-          icon: commandInput.icon,       // folder icon
+          command: commandInput.command,
+          icon: commandInput.icon,
           server: serverName,
-          text: '',
-          status: 'loading'
+          text: 'Очікування відповіді...',
+          status: 'waiting'
         }
       ]);
 
-      // Send actual script to server
       authFetch('/api/send-command', {
         method: 'POST',
-        body: JSON.stringify({ server_id: parseInt(id), command: commandInput.script }),
+        body: JSON.stringify({ server_id: parseInt(id), script: commandInput.script, command: commandInput.command }),
       })
-        .then(res => res.text())
+        .then(res => res.json())
         .then(data => {
-          setOutputs(prev =>
-            prev.map(card =>
-              card.id === cardId
-                ? { ...card, text: data, status: 'complete' }
-                : card
-            )
-          );
+          if (data.error) {
+            setOutputs(prev =>
+              prev.map(card =>
+                card.id === cardId
+                  ? { ...card, text: ` ${data.error}`, status: 'error' }
+                  : card
+              )
+            );
+          } else {
+            pollResult(id, cardId);
+          }
         })
         .catch(err => {
           setOutputs(prev =>
             prev.map(card =>
               card.id === cardId
-                ? { ...card, text: err.message, status: 'error' }
+                ? { ...card, text: `Помилка: ${err.message}`, status: 'error' }
                 : card
             )
           );
@@ -70,7 +114,7 @@ export default function IndexPage() {
           <div className="flex">
             <h2 className="h2-margin">Команда / Скрипт:</h2>
             <input
-              value={commandInput.command} // friendly name
+              value={commandInput.command}
               onChange={(e) =>
                 setCommandInput({ command: e.target.value, script: e.target.value, icon: null })
               }
@@ -99,11 +143,10 @@ export default function IndexPage() {
 
       {/* Output cards */}
       <div className="output-section">
-          {outputs.map((card) => (
-            <OutputCard key={card.id} card={card} />
-          ))}
+        {outputs.map((card) => (
+          <OutputCard key={card.id} card={card} />
+        ))}
       </div>
-
     </div>
   );
 }

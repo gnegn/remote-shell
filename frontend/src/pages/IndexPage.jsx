@@ -10,6 +10,7 @@ export default function IndexPage() {
   const [serverNames, setServerNames] = useState([]);
   const [commandInput, setCommandInput] = useState({ command: '', script: '', icon: null });
   const [outputs, setOutputs] = useState([]);
+  const [isCooldown, setIsCooldown] = useState(false); // 🔹 стан для блокування кнопки
 
   const pollResult = async (serverId, cardId) => {
     let attempts = 0;
@@ -58,6 +59,10 @@ export default function IndexPage() {
       alert('Оберіть сервер і введіть скрипт або команду');
       return;
     }
+
+    // 🔹 Включаємо кулдаун
+    setIsCooldown(true);
+    setTimeout(() => setIsCooldown(false), 1000);
 
     serverIds.forEach((id, index) => {
       const serverName = serverNames[index] || `Server ${id}`;
@@ -123,10 +128,8 @@ export default function IndexPage() {
               onChange={(e) => {
                 const value = e.target.value.trim();
                 if (value.match(/\.(ps1|sh|py|bat)$/i)) {
-                  // Якщо виглядає як файл-скрипт
                   setCommandInput({ script: value, command: '', icon: null });
                 } else {
-                  // Інакше вважаємо звичайною командою
                   setCommandInput({ command: value, script: '', icon: null });
                 }
               }}
@@ -136,7 +139,13 @@ export default function IndexPage() {
           </div>
 
           <div className="button-wrapper">
-            <button onClick={sendCommand} className="send-btn">Надіслати</button>
+            <button
+              onClick={sendCommand}
+              className={`send-btn ${isCooldown ? 'disabled' : ''}`}
+              disabled={isCooldown}
+            >
+              {isCooldown ? 'Зачекайте...' : 'Надіслати'}
+            </button>
             <button onClick={clearOutputs} className="clear-btn">
               <Delete width="1.5rem" height="1.5rem" />
             </button>

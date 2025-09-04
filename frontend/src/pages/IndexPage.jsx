@@ -54,8 +54,8 @@ export default function IndexPage() {
   };
 
   const sendCommand = async () => {
-    if (serverIds.length === 0 || !commandInput.script) {
-      alert('Оберіть сервер і введіть команду');
+    if (serverIds.length === 0 || (!commandInput.command && !commandInput.script)) {
+      alert('Оберіть сервер і введіть скрипт або команду');
       return;
     }
 
@@ -67,7 +67,7 @@ export default function IndexPage() {
         ...prev,
         {
           id: cardId,
-          command: commandInput.command,
+          command: commandInput.command || commandInput.script,
           icon: commandInput.icon,
           server: serverName,
           text: 'Очікування відповіді...',
@@ -77,7 +77,11 @@ export default function IndexPage() {
 
       authFetch('/api/send-command', {
         method: 'POST',
-        body: JSON.stringify({ server_id: parseInt(id), script: commandInput.script, command: commandInput.command }),
+        body: JSON.stringify({
+          server_id: parseInt(id),
+          script: commandInput.script || null,
+          command: commandInput.command || null
+        }),
       })
         .then(res => res.json())
         .then(data => {
@@ -111,14 +115,22 @@ export default function IndexPage() {
     <div className="content">
       <div className="command-section">
         <div className="input-wrapper">
+          {/* Один інпут для скрипта або команди */}
           <div className="flex">
             <h2 className="h2-margin">Команда / Скрипт:</h2>
             <input
-              value={commandInput.command}
-              onChange={(e) =>
-                setCommandInput({ command: e.target.value, script: e.target.value, icon: null })
-              }
-              placeholder="Наприклад, basic/sys-info.ps1 або dir"
+              value={commandInput.command || commandInput.script}
+              onChange={(e) => {
+                const value = e.target.value.trim();
+                if (value.match(/\.(ps1|sh|py|bat)$/i)) {
+                  // Якщо виглядає як файл-скрипт
+                  setCommandInput({ script: value, command: '', icon: null });
+                } else {
+                  // Інакше вважаємо звичайною командою
+                  setCommandInput({ command: value, script: '', icon: null });
+                }
+              }}
+              placeholder="Наприклад, basic/sys-info.ps1 або whoami"
               className="command-input"
             />
           </div>

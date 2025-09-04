@@ -114,6 +114,9 @@ def init_app(app):
 
         cmd = PendingCommand(server_id=server_id, command=command, is_script=is_script)
         db.session.add(cmd)
+
+        CommandResult.query.filter_by(server_id=server_id).delete(synchronize_session=False)
+
         db.session.commit()
         return jsonify({"status": "ok", "command_id": cmd.id}), 201
 
@@ -164,18 +167,42 @@ def init_app(app):
         res = CommandResult(server_id=server_id, result=result)
         db.session.add(res)
         db.session.commit()
-        app.logger.info(f"send-result: Result stored for server_id {server_id}")
+
+        CommandResult.query.filter(
+            CommandResult.server_id == server_id,
+            CommandResult.id != res.id
+        ).delete()
+        db.session.commit()
+
+        app.logger.info(f"send-result: Result stored (and old results cleared) for server_id {server_id}")
         return jsonify({"status": "Result stored"}), 201
 
     @app.route("/api/get-result/<int:server_id>", methods=["GET"])
-    def get_result(server_id): 
-        app.logger.info(f"get-result: Request for server_id {server_id}")
-        res = CommandResult.query.filter_by(server_id=server_id).order_by(CommandResult.created_at.desc()).first()
-        if res:
-            app.logger.info(f"get-result: Returning result created at {res.created_at.isoformat()} for server_id {server_id}")
-            return jsonify({"result": res.result, "created_at": res.created_at.isoformat()}), 200
-        app.logger.info(f"get-result: No results found for server_id {server_id}")
-        return jsonify({"result": None}), 200
+    def get_result(server_id):
+        consume = request.args.get("consume") in ("1", "true", "yes")
+
+        app.logger.info(f"get-result: Request for server_id {server_id}, consume={consume}")
+
+        res = (CommandResult.query
+               .filter_by(server_id=server_id)
+               .order_by(CommandResult.created_at.desc())
+               .first())
+
+        if not res:
+            app.logger.info(f"get-result: No results found for server_id {server_id}")
+            return jsonify({"result": None}), 200
+
+        payload = {
+            "result": res.result,
+            "created_at": res.created_at.isoformat()
+        }
+
+        if consume:
+            db.session.delete(res)
+            db.session.commit()
+            app.logger.info(f"get-result: Result consumed and deleted for server_id {server_id}")
+
+        return jsonify(payload), 200
 
     #------------------- USERS --------------------------
     # GET /api/users - list users 

@@ -10,9 +10,10 @@ export default function IndexPage() {
   const [serverNames, setServerNames] = useState([]);
   const [commandInput, setCommandInput] = useState({ command: '', script: '', icon: null });
   const [outputs, setOutputs] = useState([]);
-  const [isCooldown, setIsCooldown] = useState(false); // 🔹 стан для блокування кнопки
+  const [isCooldown, setIsCooldown] = useState(false);
 
-  const pollResult = async (serverId, cardId) => {
+  // 🔹 Тепер отримуємо результат по commandId
+  const pollResult = async (commandId, cardId) => {
     let attempts = 0;
     const maxAttempts = 30;
     const interval = 1000;
@@ -20,7 +21,7 @@ export default function IndexPage() {
     const timer = setInterval(async () => {
       attempts++;
       try {
-        const res = await authFetch(`/api/get-result/${serverId}`);
+        const res = await authFetch(`/api/get-result/${commandId}`);
         const data = await res.json();
         if (data.result) {
           clearInterval(timer);
@@ -46,7 +47,7 @@ export default function IndexPage() {
         setOutputs(prev =>
           prev.map(card =>
             card.id === cardId
-              ? { ...card, text: ` Помилка: ${err.message}`, status: 'error' }
+              ? { ...card, text: `Помилка: ${err.message}`, status: 'error' }
               : card
           )
         );
@@ -60,7 +61,6 @@ export default function IndexPage() {
       return;
     }
 
-    // 🔹 Включаємо кулдаун
     setIsCooldown(true);
     setTimeout(() => setIsCooldown(false), 1000);
 
@@ -76,7 +76,8 @@ export default function IndexPage() {
           icon: commandInput.icon,
           server: serverName,
           text: 'Очікування відповіді...',
-          status: 'waiting'
+          status: 'waiting',
+          commandId: null, // 🔹 спочатку пусто
         }
       ]);
 
@@ -98,8 +99,16 @@ export default function IndexPage() {
                   : card
               )
             );
-          } else {
-            pollResult(id, cardId);
+          } else if (data.command_id) {
+            // 🔹 оновлюємо картку з commandId
+            setOutputs(prev =>
+              prev.map(card =>
+                card.id === cardId
+                  ? { ...card, commandId: data.command_id }
+                  : card
+              )
+            );
+            pollResult(data.command_id, cardId);
           }
         })
         .catch(err => {
@@ -120,7 +129,6 @@ export default function IndexPage() {
     <div className="content">
       <div className="command-section">
         <div className="input-wrapper">
-          {/* Один інпут для скрипта або команди */}
           <div className="flex">
             <h2 className="h2-margin">Команда / Скрипт:</h2>
             <input
@@ -162,7 +170,6 @@ export default function IndexPage() {
         </div>
       </div>
 
-      {/* Output cards */}
       <div className="output-section">
         {outputs.map((card) => (
           <OutputCard key={card.id} card={card} />

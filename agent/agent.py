@@ -47,22 +47,22 @@ def get_command():
     return None
 
 
-def send_result(result):
+def send_result(command_id, result):
     try:
         url = f"{SERVER_URL}/api/send-result"
         payload = {
             "server_id": SERVER_ID,
-            "password": config.get("password"),  
+            "command_id": command_id,
+            "password": config.get("password"),
             "result": result
         }
         r = requests.post(url, json=payload, timeout=5)
         if r.status_code == 201:
-            log.info("Result sent successfully")
+            log.info(f"Result for command_id {command_id} sent successfully")
         else:
             log.error(f"Failed to send result: {r.text}")
     except Exception as e:
         log.error(f"Request error: {e}")
-
 
 def execute_command(cmd):
     try:
@@ -117,7 +117,7 @@ def main():
                 log.info(f"Received command: {command}")
                 result = execute_command(command)
 
-            send_result(result)
+            send_result(cmd_data["command_id"], result)
 
         time.sleep(POLL_INTERVAL)
 

@@ -12,7 +12,6 @@ export default function IndexPage() {
   const [outputs, setOutputs] = useState([]);
   const [isCooldown, setIsCooldown] = useState(false);
 
-  // 🔹 Тепер отримуємо результат по commandId
   const pollResult = async (commandId, cardId) => {
     let attempts = 0;
     const maxAttempts = 30;
@@ -77,7 +76,7 @@ export default function IndexPage() {
           server: serverName,
           text: 'Очікування відповіді...',
           status: 'waiting',
-          commandId: null, // 🔹 спочатку пусто
+          commandId: null, 
         }
       ]);
 
@@ -100,7 +99,6 @@ export default function IndexPage() {
               )
             );
           } else if (data.command_id) {
-            // 🔹 оновлюємо картку з commandId
             setOutputs(prev =>
               prev.map(card =>
                 card.id === cardId

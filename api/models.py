@@ -40,6 +40,7 @@ class CommandResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     server_id = db.Column(db.Integer, db.ForeignKey('servers.id'), nullable=False)
     result = db.Column(db.Text, nullable=False) 
+    command_id = db.Column(db.Integer, db.ForeignKey('pending_commands.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class User(db.Model):

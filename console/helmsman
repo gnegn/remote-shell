@@ -96,7 +96,11 @@ def send_command():
     }
 
     resp = session.post(f"{API_URL}/api/send-command", json=data, auth=auth)
-    safe_print_json(resp)
+    if resp.status_code == 201:
+        data = resp.json()
+        print(f"Command sent successfully! Command ID: {data['command_id']}")
+    else:
+        safe_print_json(resp)
 
 def get_command():
     server_id = int(input("Server ID: "))
@@ -106,11 +110,13 @@ def get_command():
 # ----------------- Results -----------------
 def send_result():
     server_id = int(input("Server ID: "))
+    command_id = int(input("Command ID: "))
     password = input("Agent password: ")
     result = input("Result: ")
 
     data = {
         "server_id": server_id,
+        "command_id": command_id,
         "password": password,
         "result": result
     }
@@ -119,10 +125,10 @@ def send_result():
     safe_print_json(resp)
 
 def get_result():
-    server_id = int(input("Server ID: "))
-    resp = session.get(f"{API_URL}/api/get-result/{server_id}")
+    command_id = int(input("Command ID: "))
+    resp = session.get(f"{API_URL}/api/get-result/{command_id}")
     safe_print_json(resp)
-
+    
 # ----------------- Users -----------------
 def list_users():
     resp = session.get(f"{API_URL}/api/users", auth=auth)

@@ -33,9 +33,9 @@ jobs:
 
       - name: Debug SSH connection
         run: |
-          ssh -vvv -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
-            echo '✅ Connected to:' \$(hostname)
-            echo '👤 User:' \$(whoami)
+          ssh -vvv -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+            echo 'Connected to:' \$(hostname)
+            echo 'User:' \$(whoami)
             id
             pwd
             uname -a
@@ -44,32 +44,30 @@ jobs:
 
       - name: Install Docker & Docker Compose on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             set -xe
-            sudo yum update -y
 
-            sudo yum remove -y curl-minimal || true
+            sudo apt update && sudo apt upgrade -y
 
-            sudo yum install -y curl git yum-utils device-mapper-persistent-data lvm2
+            sudo apt install -y curl git apt-transport-https ca-certificates gnupg lsb-release
 
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo \
+              \"deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+              \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-            sudo yum install -y docker-ce docker-ce-cli containerd.io
+            sudo apt update
+            sudo apt install -y docker-ce docker-ce-cli containerd.io
 
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -aG docker ec2-user
-
-            sudo curl -L 'https://github.com/docker/compose/releases/download/2.20.2/docker-compose-\$(uname -s)-\$(uname -m)' -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
+            sudo usermod -aG docker ubuntu
+            sudo apt install -y docker-compose-plugin
 
             docker --version
-            docker-compose --version
+            docker compose version
           "
-
       - name: Create volumes and network
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             docker volume create $SQLITE_VOLUME || true
             docker volume create $FRONTEND_VOLUME || true
             docker network create $NETWORK_NAME || true
@@ -77,7 +75,7 @@ jobs:
 
       - name: Pull Docker images from Docker Hub
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
             docker pull $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
             docker pull $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
@@ -87,24 +85,24 @@ jobs:
 
       - name: Stop old containers
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             docker rm -f api frontend nginx console || true
           "
 
       - name: Run containers (full stack)
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             docker run -d --name api --network $NETWORK_NAME -v $SQLITE_VOLUME:/app/data $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
             docker run -d --name frontend --network $NETWORK_NAME -v $FRONTEND_VOLUME:/app/dist $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG sh -c 'npm run build'
             docker run -d --name nginx --network $NETWORK_NAME -v $FRONTEND_VOLUME:/usr/share/nginx/html -p 80:80 --link frontend --link api $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG
             docker run -d --name console --network $NETWORK_NAME -v ./console:/app -it $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG
           "
 
-      - name: Configure firewall (Amazon Linux)
+      - name: Configure firewall (Ubuntu)
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$EC2_IP "
-            sudo iptables -I INPUT -p tcp --dport 22 -j ACCEPT
-            sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
-            sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
-            sudo service iptables save || true
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+            sudo ufw allow 22/tcp
+            sudo ufw allow 80/tcp
+            sudo ufw allow 443/tcp
+            sudo ufw --force enable || true
           "

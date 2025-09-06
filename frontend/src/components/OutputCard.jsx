@@ -15,13 +15,20 @@ export default function OutputCard({ card }) {
       </div>
 
       <div className="output-body">
-        <pre>{card.text || '...'}</pre>
+        <textarea
+          readOnly
+          value={card.text || '...'}
+          className="output-textarea"
+        />
       </div>
 
+
+
       <div className={`output-status ${card.status}`}>
-        {card.status === 'loading' && 'Loading...'}
+        {card.status === 'waiting' && 'Waiting...'}
         {card.status === 'complete' && 'Complete'}
         {card.status === 'error' && 'Error'}
+        {card.status === 'timeout' && 'Timeout'}
       </div>
     </div>
   );

@@ -1,33 +1,34 @@
-provider "aws" {
-  region = var.aws_region
-}
-
-resource "aws_security_group" "allow_http" {
-  name        = "control-center-sg"
-  description = "Allow 8000-8002, 5173 and SSH"
+resource "aws_security_group" "remote_shell_sg" {
+  name        = "remote-shell-sg"
+  description = "Allow SSH, HTTP, and HTTPS"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    from_port   = 8000
-    to_port     = 8002
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 5173
-    to_port     = 5173
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
+    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
+    description = "All traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -35,16 +36,13 @@ resource "aws_security_group" "allow_http" {
   }
 }
 
-
-resource "aws_instance" "control_center" {
-  ami               = var.instance_ami
-  instance_type     = var.instance_type
-  key_name          = var.key_name 
-  security_groups   = [aws_security_group.allow_http.name]
-  associate_public_ip_address = true
+resource "aws_instance" "remote_shell" {
+  ami           = "ami-0c4fc5dcabc9df21d"
+  instance_type = "t3.micro"
+  key_name      = var.key_name
+  vpc_security_group_ids = [aws_security_group.remote_shell_sg.id]
 
   tags = {
-    Name = "ControlCenter"
+    Name = "remote-shell"
   }
 }
-

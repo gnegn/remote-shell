@@ -1,0 +1,42 @@
+name: Terraform Deploy
+
+on:
+  workflow_dispatch
+
+jobs:
+  terraform:
+    name: Apply Terraform
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: List repo files
+        run: ls -R
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./infra
+
+      - name: Terraform Plan
+        run: terraform plan -var="key_name=remote-shell"
+        working-directory: ./infra
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve -var="key_name=remote-shell"
+        working-directory: ./infra

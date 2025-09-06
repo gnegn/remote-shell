@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { setToken } from "../auth";
+import { Account, Lock, Close } from "../components/icons/jsx";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
+  const [usernameFocus, setUsernameFocus] = useState(false);
+
   const [password, setPassword] = useState("");
+  const [passwordFocus, setPasswordFocus] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,48 +45,63 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-10">
-        <h1 className="text-3xl font-extrabold text-center mb-2 text-gray-800">
-          Remote Shell
-        </h1>
-        <p className="text-center text-gray-500 mb-8">Логін до системи</p>
+    <div className="login-page-container">
+      <div className="login-box">
+        <h2 className="h2-margin">Вхід у систему</h2>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
+        {error && <div className="error">{error}</div>}
+
+        <form onSubmit={handleLogin} className="form">
+          {/* Username input */}
+          <div className="input-wrapper">
             <input
               type="text"
-              placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-5 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              onFocus={() => setUsernameFocus(true)}
+              onBlur={() => setUsernameFocus(false)}
+              required
             />
+            {!username && !usernameFocus && (
+              <>
+                <span className="icon"><Account /></span>
+                <span className="placeholder-text">Ім'я користувача</span>
+              </>
+            )}
+            {username && (
+              <span className="clear-icon" onClick={() => setUsername("")}>
+                <Close />
+              </span>
+            )}
           </div>
 
-          <div>
+          {/* Password input */}
+          <div className="input-wrapper">
             <input
               type="password"
-              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              onFocus={() => setPasswordFocus(true)}
+              onBlur={() => setPasswordFocus(false)}
+              required
             />
+            {!password && !passwordFocus && (
+              <>
+                <span className="icon"><Lock /></span>
+                <span className="placeholder-text">Пароль</span>
+              </>
+            )}
+            {password && (
+              <span className="clear-icon" onClick={() => setPassword("")}>
+                <Close />
+              </span>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 disabled:opacity-70 text-white font-semibold py-3 rounded-xl shadow-md transition-all"
-          >
+          <button type="submit" disabled={loading}>
             {loading ? "Вхід..." : "Увійти"}
           </button>
         </form>
-
-        {error && (
-          <div className="mt-6 text-red-500 text-center font-medium">
-            {error}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ resource "aws_security_group" "remote_shell_sg" {
 }
 
 resource "aws_instance" "remote_shell" {
-  ami           = "ami-0c4fc5dcabc9df21d"
+  ami           = "ami-0a716d3f3b16d290c"
   instance_type = "t3.micro"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.remote_shell_sg.id]

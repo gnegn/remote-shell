@@ -3,6 +3,7 @@ version: '3.8'
 services:
   api:
     build: ./api
+    image: api:latest
     expose:
       - "8000"
     networks:
@@ -12,6 +13,7 @@ services:
 
   frontend:
     build: ./frontend
+    image: frontend:latest
     command: sh -c "npm run build"
     volumes:
       - frontend_build:/app/dist
@@ -20,6 +22,7 @@ services:
 
   nginx:
     build: ./nginx
+    image: nginx:latest
     volumes:
       - frontend_build:/usr/share/nginx/html
     ports:
@@ -32,6 +35,7 @@ services:
 
   console:
     build: ./console
+    image: console:latest
     stdin_open: true   
     tty: true          
     volumes:

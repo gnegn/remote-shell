@@ -1,0 +1,49 @@
+name: Build and Push Docker Images
+
+on:
+  workflow_dispatch:
+
+jobs:
+  docker:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    env:
+      COMMIT_SHA: ${{ github.sha }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Compose
+        run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+      - name: Build all Docker images
+        run: docker-compose -f docker-compose.yml build
+
+      - name: Tag and Push API image
+        run: |
+          docker tag api:latest $DOCKERHUB_USERNAME/api:$COMMIT_SHA
+          docker push $DOCKERHUB_USERNAME/api:$COMMIT_SHA
+
+      - name: Tag and Push Frontend image
+        run: |
+          docker tag frontend:latest $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
+          docker push $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
+
+      - name: Tag and Push Nginx image
+        run: |
+          docker tag nginx:latest $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
+          docker push $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
+
+      - name: Tag and Push Console image
+        run: |
+          docker tag console:latest $DOCKERHUB_USERNAME/console:$COMMIT_SHA
+          docker push $DOCKERHUB_USERNAME/console:$COMMIT_SHA

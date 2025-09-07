@@ -107,6 +107,24 @@ body {
     background-color:var(--bg-muted);
     display: flex;
     align-items: center;
+<<<<<<< HEAD
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    height: 3.5rem;
+    padding-inline: 1rem;
+}
+
+.brand-link {
+  display: flex;        
+  align-items: center;    
+  gap: 0.5rem;           
+  text-decoration: none;  
+  color: inherit;        
+}
+
+.brand-icon {
+    height: 2rem;
+=======
     justify-content: center;
     border-bottom: 1px solid var(--border-color);
     height: 3.5rem;
@@ -120,16 +138,35 @@ body {
 
 .header-icon {
     height:2rem;
+>>>>>>> 20e4b27f4010c94957c544768fdf9f85ba0fe35e
     width: auto;
     display: block;
 }
 
+<<<<<<< HEAD
+.brand-text {
+    font-size: var(--font-size-normal);
+=======
 .header-title {
     font-size: 1.125rem;
+>>>>>>> 20e4b27f4010c94957c544768fdf9f85ba0fe35e
     font-weight: bold;
     text-transform: uppercase;
     color:var(--text-secondary);
     white-space: nowrap;
+<<<<<<< HEAD
+}
+
+.logout-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap:1rem;
+}
+
+
+
+=======
     user-select: none;
 }
 
@@ -140,6 +177,7 @@ body {
     gap:1.5rem;
 }
 
+>>>>>>> 20e4b27f4010c94957c544768fdf9f85ba0fe35e
 /*----------------------- Navigation-------------------------*/
 
 .main-nav {

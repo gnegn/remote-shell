@@ -30,20 +30,20 @@ jobs:
 
       - name: Tag and Push API image
         run: |
-          docker tag api:latest $DOCKERHUB_USERNAME/api:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/api:$COMMIT_SHA
+          docker tag api:latest $DOCKERHUB_USERNAME/api:latest
+          docker push $DOCKERHUB_USERNAME/api:latest
 
       - name: Tag and Push Frontend image
         run: |
-          docker tag frontend:latest $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
+          docker tag frontend:latest $DOCKERHUB_USERNAME/frontend:latest
+          docker push $DOCKERHUB_USERNAME/frontend:latest
 
       - name: Tag and Push Nginx image
         run: |
-          docker tag nginx:latest $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
+          docker tag nginx:latest $DOCKERHUB_USERNAME/nginx:latest
+          docker push $DOCKERHUB_USERNAME/nginx:latest
 
       - name: Tag and Push Console image
         run: |
-          docker tag console:latest $DOCKERHUB_USERNAME/console:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/console:$COMMIT_SHA
+          docker tag console:latest $DOCKERHUB_USERNAME/console:latest
+          docker push $DOCKERHUB_USERNAME/console:latest

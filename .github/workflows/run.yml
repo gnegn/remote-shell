@@ -45,34 +45,12 @@ jobs:
       - name: Install Docker & Docker Compose on EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
-            set -xe
-
-            sudo apt update && sudo apt upgrade -y
-
-            sudo apt install -y curl git apt-transport-https ca-certificates gnupg lsb-release
-
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo \
-              \"deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-              \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-            sudo apt update
-            sudo apt install -y docker-ce docker-ce-cli containerd.io
-
-            sudo usermod -aG docker ubuntu
-            sudo apt install -y docker-compose-plugin
-
+            sudo apt-get update -y
+            sudo apt-get install -y docker.io docker-compose-plugin
+            sudo usermod -aG docker ubuntu || true
             docker --version
             docker compose version
           "
-      - name: Create volumes and network
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
-            docker volume create $SQLITE_VOLUME || true
-            docker volume create $FRONTEND_VOLUME || true
-            docker network create $NETWORK_NAME || true
-          "
-
       - name: Pull Docker images from Docker Hub
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "

@@ -33,10 +33,10 @@ jobs:
         working-directory: ./infra
 
       - name: Terraform Plan
-        run: terraform plan -var="key_name=remote-shell"
+        run: terraform plan -var="key_name=remote-shell-secret"
         working-directory: ./infra
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -var="key_name=remote-shell"
+        run: terraform apply -auto-approve -var="key_name=remote-shell-secret"
         working-directory: ./infra

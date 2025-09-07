@@ -9,10 +9,12 @@ services:
     networks:
       - app-network
     volumes:
-      - sqlite_data:/app/data 
+      - sqlite_data:/app/data
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     image: frontend:latest
     command: sh -c "npm run build"
     volumes:
@@ -23,27 +25,15 @@ services:
   nginx:
     build: ./nginx
     image: nginx:latest
-    volumes:
-      - frontend_build:/usr/share/nginx/html
     ports:
       - "80:80"
+    volumes:
+      - frontend_build:/usr/share/nginx/html
     depends_on:
       - api
       - frontend
     networks:
       - app-network
-
-  console:
-    build: ./console
-    image: console:latest
-    stdin_open: true   
-    tty: true          
-    volumes:
-      - ./console:/app
-    networks:
-      - app-network
-    depends_on:
-      - api
 
 volumes:
   sqlite_data:

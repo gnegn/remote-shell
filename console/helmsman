@@ -10,13 +10,16 @@ def load_config():
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
     else:
-        default_config = {"api_url": "http://localhost:8000"}
+        # fallback на http://api:8000
+        api_host = os.environ.get("API_HOST", "api")
+        api_port = os.environ.get("API_PORT", "8000")
+        default_config = {"api_url": f"http://{api_host}:{api_port}"}
         with open(CONFIG_FILE, "w") as f:
             json.dump(default_config, f, indent=4)
         return default_config
 
 config = load_config()
-API_URL = config.get("api_url", "http://localhost:8000")
+API_URL = config.get("api_url", "http://api:8000")
 
 # ----------------- Session & Auth -----------------
 session = requests.Session()
@@ -121,12 +124,12 @@ def send_result():
         "result": result
     }
 
-    resp = session.post(f"{API_URL}/api/send-result", json=data)
+    resp = session.post(f"{API_URL}/api/send-result", json=data, auth=auth)
     safe_print_json(resp)
 
 def get_result():
     command_id = int(input("Command ID: "))
-    resp = session.get(f"{API_URL}/api/get-result/{command_id}")
+    resp = session.get(f"{API_URL}/api/get-result/{command_id}", auth=auth)
     safe_print_json(resp)
     
 # ----------------- Users -----------------

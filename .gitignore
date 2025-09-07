@@ -48,3 +48,4 @@ dist-ssr
 helmsman_config.json
 agent/configs
 agent/logs
+ec2_key_base64.txt

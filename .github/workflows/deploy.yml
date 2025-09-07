@@ -1,3 +1,4 @@
+#Build and push docker image to docker hub.yml
 name: Build and Push Docker Images
 
 on:
@@ -11,9 +12,15 @@ jobs:
     env:
       COMMIT_SHA: ${{ github.sha }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      IMAGE_TAG: latest
+      API_IMAGE: api
+      FRONTEND_IMAGE: frontend
+      NGINX_IMAGE: nginx
+      CONSOLE_IMAGE: console
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
@@ -25,25 +32,20 @@ jobs:
       - name: Set up Docker Compose
         run: sudo apt-get update && sudo apt-get install -y docker-compose
 
-      - name: Build all Docker images
-        run: docker-compose -f docker-compose.yml build
-
-      - name: Tag and Push API image
+      - name: Build and push Docker images
         run: |
-          docker tag api:latest $DOCKERHUB_USERNAME/api:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/api:$COMMIT_SHA
+          # API
+          docker build -t $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG ./api
+          docker push $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
 
-      - name: Tag and Push Frontend image
-        run: |
-          docker tag frontend:latest $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/frontend:$COMMIT_SHA
+          # Frontend
+          docker build -t $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG ./frontend
+          docker push $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
 
-      - name: Tag and Push Nginx image
-        run: |
-          docker tag nginx:latest $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/nginx:$COMMIT_SHA
+          # Nginx
+          docker build -t $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG ./nginx
+          docker push $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG
 
-      - name: Tag and Push Console image
-        run: |
-          docker tag console:latest $DOCKERHUB_USERNAME/console:$COMMIT_SHA
-          docker push $DOCKERHUB_USERNAME/console:$COMMIT_SHA
+          # Console
+          docker build -t $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG ./console
+          docker push $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG

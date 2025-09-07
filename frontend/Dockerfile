@@ -1,11 +1,13 @@
-# frontend/Dockerfile
-FROM node:24-alpine
+FROM node:18-alpine AS frontend
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+
+RUN npm install
 
 COPY . .
 
-CMD ["npm", "run", "build"]
+RUN npm run build
+
+CMD ["echo", "Frontend build complete"]

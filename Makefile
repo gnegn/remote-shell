@@ -1,7 +1,7 @@
 .PHONY: up down destroy logs console
 
 up:
-	docker compose up -d --build api frontend nginx
+	docker compose up -d --build api nginx
 
 down:
 	docker compose down
@@ -26,4 +26,4 @@ console:
 	docker compose run --rm console
 restart:
 	docker compose down
-	docker compose up -d --build api frontend nginx
+	docker compose up -d --build api nginx

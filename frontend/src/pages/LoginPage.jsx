@@ -33,7 +33,10 @@ export default function LoginPage() {
       const token = data.token || data.access_token;
       if (token) {
         setToken(token);
+<<<<<<< HEAD
         localStorage.setItem("username", username);
+=======
+>>>>>>> 20e4b27f4010c94957c544768fdf9f85ba0fe35e
         window.location.href = "/";
       } else {
         throw new Error("Token not received");

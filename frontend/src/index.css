@@ -107,38 +107,42 @@ body {
     background-color:var(--bg-muted);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
     height: 3.5rem;
+    padding-inline: 1rem;
 }
 
-.header-left {
-    display: flex;
-    align-items: center;
-    gap:1rem;
+.brand-link {
+  display: flex;        
+  align-items: center;    
+  gap: 0.5rem;           
+  text-decoration: none;  
+  color: inherit;        
 }
 
-.header-icon {
-    height:2rem;
+.brand-icon {
+    height: 2rem;
     width: auto;
     display: block;
 }
 
-.header-title {
-    font-size: 1.125rem;
+.brand-text {
+    font-size: var(--font-size-normal);
     font-weight: bold;
     text-transform: uppercase;
     color:var(--text-secondary);
     white-space: nowrap;
-    user-select: none;
 }
 
-.user-info {
+.logout-section {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap:1.5rem;
+    gap:1rem;
 }
+
+
 
 /*----------------------- Navigation-------------------------*/
 

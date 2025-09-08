@@ -1,3 +1,4 @@
+#frontend dockerfile
 FROM node:18-alpine AS frontend
 
 WORKDIR /app

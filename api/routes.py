@@ -232,10 +232,11 @@ def init_app(app):
     @app.route("/api/users", methods=["POST"])
     @auth_required(role="admin")
     def create_user(user):
-        data = request.get_json() or {}
+        data = request.get_json(force=True) or {}
         username = data.get("username")
         password = data.get("password")
         role = data.get("role", "user")
+        visible_name = data.get("visible_name") or "" 
 
         if not username or not password:
             return jsonify({"error": "username and password required"}), 400
@@ -246,12 +247,24 @@ def init_app(app):
         new_user = User(
             username=username,
             password_hash=generate_password_hash(password),
-            role=role
+            role=role,
+            visible_name=visible_name
         )
-        db.session.add(new_user)
-        db.session.commit()
 
-        return jsonify({"status": "user created", "username": username, "role": role}), 201
+        db.session.add(new_user)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Failed to create user: {str(e)}"}), 500
+
+        return jsonify({
+            "status": "user created",
+            "username": username,
+            "role": role,
+            "visible_name": visible_name
+        }), 201
+
 
     # -------------------- USER SERVERS --------------------
     # GET /api/user-servers - list of servers assigned to the authenticated user
@@ -303,6 +316,8 @@ def init_app(app):
     # -------------------- AUTH --------------------
     # POST /api/login - user login, returns JWT token
 
+
+
     @app.route("/api/login", methods=["POST"])
     def login():
         data = request.get_json() or {}
@@ -327,8 +342,12 @@ def init_app(app):
             algorithm="HS256"
         )
 
-        # змусити token бути str, а не bytes
         if isinstance(token, bytes):
             token = token.decode("utf-8")
 
-        return jsonify({"token": token, "role": user.role}), 200
+        return jsonify({
+            "token": token,
+            "role": user.role,
+            "username": user.username,
+            "visible_name": user.visible_name  
+        }), 200

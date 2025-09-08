@@ -5,12 +5,12 @@ import { clearToken } from '../auth';
 function LogoutButton() {
   const navigate = useNavigate();
 
-  // Example: username from localStorage (adjust as needed)
-  const username = localStorage.getItem("username") || "Користувач";
+  const username = localStorage.getItem("visible_name") || "Користувач";
 
   const handleLogout = () => {
     clearToken();
-    localStorage.removeItem("username"); // clear username too
+    localStorage.removeItem("username"); 
+    localStorage.removeItem("visible_name");
     navigate("/login");
   };
 

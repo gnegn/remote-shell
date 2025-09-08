@@ -141,11 +141,13 @@ def create_user():
     username = input("Username: ")
     password = input("Password: ")
     role = input("Role (admin/user): ")
+    visible_name = input("Visible name (first and second name, UA): ")
 
     data = {
         "username": username,
         "password": password,
-        "role": role
+        "role": role,
+        "visible_name": visible_name
     }
 
     resp = session.post(f"{API_URL}/api/users", json=data, auth=auth)

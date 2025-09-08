@@ -42,10 +42,6 @@ jobs:
           docker build -t $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG ./frontend
           docker push $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
 
-          # Nginx
-          docker build -t $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG ./nginx
-          docker push $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG
-
           # Console
           docker build -t $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG ./console
           docker push $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG

@@ -32,6 +32,11 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ec2_key.pem
           chmod 600 ec2_key.pem
 
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 --decode > ec2_key.pem
+          chmod 600 ec2_key.pem
+
       - name: Debug SSH connection
         run: |
           ssh -vvv -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
@@ -47,15 +52,20 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             sudo apt-get update -y
-            sudo apt-get install -y docker.io docker-compose-plugin
-            sudo usermod -aG docker ubuntu || true
-            docker --version
-            docker compose version
+            sudo apt install curl software-properties-common ca-certificates apt-transport-https -y
+            wget -O- https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor | sudo tee /etc/apt/keyrings/docker.gpg > /dev/null 
+            echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"| sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt update -y
+            apt-cache policy docker-ce
+            sudo apt install docker-ce -y
+            sudo systemctl status docker
+            sudo apt-get install docker-compose -y
           "
 
       - name: Pull Docker images from Docker Hub
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+            sudo usermod -aG docker ubuntu
             echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
             docker pull $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
             docker pull $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
@@ -63,27 +73,34 @@ jobs:
             docker pull $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG
           "
 
+
       - name: Stop old containers
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
             docker rm -f api frontend nginx || true
           "
 
-      - name: Run containers (API + Frontend + Nginx + Console)
+      - name: Run containers
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
-            docker network inspect $NETWORK_NAME >/dev/null 2>&1 || docker network create $NETWORK_NAME
 
-            docker run -d --name api --network $NETWORK_NAME -v $SQLITE_VOLUME:/app/data $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
+            docker network create ${NETWORK_NAME} || true
 
-            docker run -d --name frontend --network $NETWORK_NAME -v $FRONTEND_VOLUME:/app/dist $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
 
-            docker run -d --name nginx --network $NETWORK_NAME -v $FRONTEND_VOLUME:/usr/share/nginx/html -p 80:80 --link frontend --link api $DOCKERHUB_USERNAME/$NGINX_IMAGE:$IMAGE_TAG
+            docker volume create ${SQLITE_VOLUME} || true
 
-            docker rm -f console || true
-            docker run -d --name console --network $NETWORK_NAME -e API_HOST=api -e API_PORT=8000 $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG
+            docker run -d \
+              --name api \
+              --network ${NETWORK_NAME} \
+              --mount source=${SQLITE_VOLUME},target=/app/data \
+              $DOCKERHUB_USERNAME/${API_IMAGE}:${IMAGE_TAG}
+
+            docker run -d \
+              --name frontend \
+              --network ${NETWORK_NAME} \
+              -p 80:80 \
+              $DOCKERHUB_USERNAME/${FRONTEND_IMAGE}:${IMAGE_TAG}
           "
-
 
       - name: Configure firewall (Ubuntu)
         run: |

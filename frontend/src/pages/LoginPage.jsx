@@ -29,12 +29,14 @@ export default function LoginPage() {
         throw new Error(msg || "Login failed");
       }
 
-      const data = await res.json();
-      const token = data.token || data.access_token;
-      if (token) {
-        setToken(token);
-        window.location.href = "/";
-      } else {
+    const data = await res.json();
+    const token = data.token || data.access_token;
+    if (token) {
+      setToken(token);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("visible_name", data.visible_name);
+      window.location.href = "/";
+    } else {
         throw new Error("Token not received");
       }
     } catch (err) {

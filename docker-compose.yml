@@ -16,28 +16,27 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: frontend:latest
-    command: sh -c "npm run build"
-    volumes:
-      - frontend_build:/app/dist
+    ports:
+      - "80:80"
+    depends_on:
+      - api
     networks:
       - app-network
 
-  nginx:
-    build: ./nginx
-    image: nginx:latest
-    ports:
-      - "80:80"
+  console:
+    build: ./console
+    image: console:latest
+    stdin_open: true   
+    tty: true          
     volumes:
-      - frontend_build:/usr/share/nginx/html
-    depends_on:
-      - api
-      - frontend
+      - ./console:/app
     networks:
       - app-network
+    depends_on:
+      - api
 
 volumes:
   sqlite_data:
-  frontend_build:
 
 networks:
   app-network:

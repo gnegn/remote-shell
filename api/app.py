@@ -18,8 +18,9 @@ def create_default_admin():
     if not User.query.filter_by(username="admin").first():
         admin = User(
             username="admin",
-            password_hash=generate_password_hash("admin"),
-            role="admin"
+            password_hash=generate_password_hash("4XIyL9Qav5zod4OmT29XzJYU"),
+            role="admin",
+            visible_name="Увага!!! Видаліть цього користувача та створіть нового з надійним паролем!!!!"
         )
         db.session.add(admin)
         try:

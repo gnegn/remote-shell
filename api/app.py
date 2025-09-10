@@ -20,7 +20,7 @@ def create_default_admin():
             username="admin",
             password_hash=generate_password_hash("4XIyL9Qav5zod4OmT29XzJYU"),
             role="admin",
-            visible_name="Увага!!! Видаліть цього користувача та створіть нового з надійним паролем!!!!"
+            visible_name="Адміністратор"
         )
         db.session.add(admin)
         try:

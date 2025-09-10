@@ -18,22 +18,12 @@ services:
     image: frontend:latest
     ports:
       - "80:80"
-    depends_on:
-      - api
-    networks:
-      - app-network
-
-  console:
-    build: ./console
-    image: console:latest
-    stdin_open: true   
-    tty: true          
     volumes:
-      - ./console:/app
-    networks:
-      - app-network
+      - frontend_build:/usr/share/nginx/html
     depends_on:
       - api
+    networks:
+      - app-network
 
 volumes:
   sqlite_data:

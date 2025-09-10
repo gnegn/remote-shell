@@ -49,3 +49,25 @@ helmsman_config.json
 agent/configs
 agent/logs
 ec2_key_base64.txt
+
+# Agent
+agent/dist/
+agent/build/
+agent/*.spec
+agent/configurator.exe
+agent/logs/
+agent/configurator.spec
+agent/icon.png
+agent/icon.ico
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+*.manifest
+*.log
+*.spec

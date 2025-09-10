@@ -179,7 +179,7 @@ export default function BasePage() {
           className="server-search-input"
           placeholder="Search servers..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)} // Оновлення запиту пошуку
+          onChange={(e) => setSearchQuery(e.target.value)} 
         />
         <button
           onClick={openAddServerModal}

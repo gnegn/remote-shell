@@ -2,131 +2,32 @@ import os
 import json
 import tkinter as tk
 from tkinter import messagebox
-import sys
-import threading
-from datetime import datetime
-import time
-import logging
-import requests
 import subprocess
+import sys
+import signal
+from datetime import datetime
+import threading
 
-# -------------------- Utility --------------------
-def resource_path(relative_path):
-    """Повертає правильний шлях до ресурсів всередині .exe"""
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-CONFIG_DIR = resource_path("configs")
+CONFIG_DIR = "configs"
 LOG_DIR = "logs"
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 DEFAULT_FONT = ("Segoe UI", 9)
-ICON_PATH = resource_path("icon.png")
 
-# -------------------- Agent Logic --------------------
-def agent_main(config_file, log_callback=None):
-    """Основна функція агента"""
-    # Завантажуємо конфіг
-    with open(config_file, "r", encoding="utf-8") as f:
-        config = json.load(f)
 
-    SERVER_URL = config.get("server_url", "http://10.0.2.2:8000")
-    SERVER_ID = config.get("server_id", 1)
-    POLL_INTERVAL = config.get("poll_interval", 2)
-    PASSWORD = config.get("password", "")
-
-    logger = logging.getLogger(f"Agent-{SERVER_ID}")
-    logger.setLevel(logging.INFO)
-
-    class CallbackHandler(logging.Handler):
-        def emit(self, record):
-            msg = self.format(record)
-            if log_callback:
-                log_callback(msg)
-            else:
-                print(msg)
-
-    handler = CallbackHandler()
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    def get_command():
-        try:
-            r = requests.get(f"{SERVER_URL}/api/get-command/{SERVER_ID}", timeout=5)
-            if r.status_code == 200:
-                return r.json()
-            logger.error(f"Bad response ({r.status_code}): {r.text}")
-        except Exception as e:
-            logger.error(f"Request error: {e}")
-        return None
-
-    def send_result(command_id, result):
-        try:
-            payload = {
-                "server_id": SERVER_ID,
-                "command_id": command_id,
-                "password": PASSWORD,
-                "result": result
-            }
-            r = requests.post(f"{SERVER_URL}/api/send-result", json=payload, timeout=5)
-            if r.status_code == 201:
-                logger.info(f"Result for command_id {command_id} sent successfully")
-            else:
-                logger.error(f"Failed to send result: {r.text}")
-        except Exception as e:
-            logger.error(f"Request error: {e}")
-
-    def execute_command(cmd):
-        try:
-            logger.info(f"Executing command: {cmd}")
-            completed = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            output = completed.stdout.strip() + completed.stderr.strip()
-            logger.info(f"Command output: {output[:200]}{'...' if len(output) > 200 else ''}")
-            return output
-        except Exception as e:
-            logger.error(f"Error executing command: {e}")
-            return f"Error executing command: {e}"
-
-    logger.info(f"Agent started with config: {config_file}")
-    logger.info(f"Connecting to {SERVER_URL} (server_id={SERVER_ID}, poll={POLL_INTERVAL}s)")
-
-    while True:
-        cmd_data = get_command()
-        if cmd_data and cmd_data.get("command"):
-            is_script = cmd_data.get("is_script", False)
-            command = cmd_data["command"]
-
-            if is_script:
-                logger.info(f"Received script: {command}")
-                script_content = cmd_data.get("script_content", "")
-                temp_path = os.path.join(os.getenv("TEMP", "C:\\Temp"), "agent_temp_script.ps1")
-                os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-                with open(temp_path, "w", encoding="utf-8") as f:
-                    f.write(script_content)
-                result = execute_command(f"powershell -ExecutionPolicy Bypass -File \"{temp_path}\"")
-            else:
-                logger.info(f"Received command: {command}")
-                result = execute_command(command)
-
-            send_result(cmd_data["command_id"], result)
-
-        time.sleep(POLL_INTERVAL)
-
-# -------------------- GUI Logic --------------------
 class ConfigManagerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Agent Config Manager")
-        self.root.geometry("1000x550")
+        self.root.geometry("1300x700")
         self.root.resizable(False, False)
+
         self.selected_config = None
-        self.running_agents = {}
+        self.running_agents = {}  
 
         try:
-            self.root.iconphoto(False, tk.PhotoImage(file=ICON_PATH))
+            self.root.iconphoto(False, tk.PhotoImage(file="icon.png"))
         except Exception:
             pass
 
@@ -142,6 +43,7 @@ class ConfigManagerApp:
 
         btn_frame = tk.Frame(right_frame, bg="white")
         btn_frame.pack(fill=tk.X)
+
         buttons = [
             ("➕ New", self.new_config),
             ("✏️ Edit", self.edit_selected_config),
@@ -150,6 +52,8 @@ class ConfigManagerApp:
             ("❌ Delete", self.delete_config),
             ("▶ Run", self.run_agent),
             ("⏹ Stop", self.stop_agent),
+            ("⚙ Run as Service", self.run_as_service),
+            ("🛑 Stop Service", self.stop_service),
         ]
         for txt, cmd in buttons:
             tk.Button(btn_frame, text=txt, command=cmd, font=DEFAULT_FONT).pack(side=tk.LEFT, padx=3, pady=3)
@@ -173,7 +77,6 @@ class ConfigManagerApp:
         self.log_text.insert(tk.END, f"[{ts}] {message}\n")
         self.log_text.see(tk.END)
 
-    # ---------------- Config Methods ----------------
     def refresh_config_list(self):
         self.config_listbox.delete(0, tk.END)
         for file in sorted(os.listdir(CONFIG_DIR)):
@@ -203,7 +106,6 @@ class ConfigManagerApp:
         except Exception as e:
             self.log(f"[ERROR] Failed to load {filename}: {e}")
 
-    # ----------------- CRUD -----------------
     def new_config(self):
         self.show_config_form("New Config")
 
@@ -223,6 +125,7 @@ class ConfigManagerApp:
         form = tk.Toplevel(self.root)
         form.title(title)
         form.geometry("350x250")
+
         entries = {}
         fields = {
             "name": "",
@@ -249,6 +152,7 @@ class ConfigManagerApp:
             except ValueError:
                 messagebox.showerror("Invalid Input", "server_id and poll_interval must be integers!")
                 return
+
             fname = filename or f"{new_data['name']}.json"
             with open(os.path.join(CONFIG_DIR, fname), "w", encoding="utf-8") as f:
                 json.dump(new_data, f, indent=4)
@@ -296,7 +200,6 @@ class ConfigManagerApp:
         finally:
             self.context_menu.grab_release()
 
-    # ---------------- Run / Stop Agents ----------------
     def run_agent(self):
         if not self.selected_config:
             messagebox.showwarning("Run Error", "No config selected!")
@@ -310,17 +213,29 @@ class ConfigManagerApp:
         log_file = os.path.join(LOG_DIR, f"agent_{config_name.replace('.json','')}.log")
         self.log(f"[INFO] Running agent with config {self.selected_config}")
 
-        def log_callback(msg):
-            ts = datetime.now().strftime("%H:%M:%S")
-            self.log_text.insert(tk.END, f"[{ts}] {msg}\n")
-            self.log_text.see(tk.END)
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(msg + "\n")
+        try:
+            f = open(log_file, "a", encoding="utf-8")
+            proc = subprocess.Popen(
+                [sys.executable, "agent.py", self.selected_config],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                bufsize=1, universal_newlines=True
+            )
+            self.running_agents[config_name] = proc
+            self.running_listbox.insert(tk.END, config_name)
 
-        thread = threading.Thread(target=agent_main, args=(self.selected_config, log_callback), daemon=True)
-        thread.start()
-        self.running_agents[config_name] = thread
-        self.running_listbox.insert(tk.END, config_name)
+            def reader():
+                for line in proc.stdout:
+                    ts = datetime.now().strftime("%H:%M:%S")
+                    msg = f"[{config_name}] {line.strip()}"
+                    self.log_text.insert(tk.END, f"[{ts}] {msg}\n")
+                    self.log_text.see(tk.END)
+                    f.write(msg + "\n")
+                    f.flush()
+
+            threading.Thread(target=reader, daemon=True).start()
+
+        except Exception as e:
+            self.log(f"[ERROR] Failed to run agent: {e}")
 
     def stop_agent(self):
         selection = self.running_listbox.curselection()
@@ -328,13 +243,42 @@ class ConfigManagerApp:
             messagebox.showwarning("Stop Error", "No running agent selected!")
             return
         config_name = self.running_listbox.get(selection[0])
-        thread = self.running_agents.get(config_name)
-        # Убивати потік безпечно неможливо, просто видаляємо з GUI
+
+        proc = self.running_agents.get(config_name)
+        if proc and proc.poll() is None:  
+            try:
+                proc.kill()  # force kill
+                proc.wait(timeout=5)  
+                self.log(f"[INFO] Killed agent {config_name}")
+            except Exception as e:
+                self.log(f"[ERROR] Failed to kill {config_name}: {e}")
+        else:
+            self.log(f"[WARN] Agent {config_name} is not running")
+
         self.running_listbox.delete(selection[0])
         self.running_agents.pop(config_name, None)
-        self.log(f"[INFO] Stopped agent {config_name} (thread not force-killed)")
 
-# -------------------- Main --------------------
+    def run_as_service(self):
+        if not self.selected_config:
+            messagebox.showwarning("Run Error", "No config selected!")
+            return
+        config_name = os.path.basename(self.selected_config)
+        try:
+            subprocess.run([sys.executable, "service.py", "install"], check=True)
+            subprocess.run([sys.executable, "service.py", "start"], check=True)
+            self.log(f"[INFO] Service started for {config_name}")
+        except Exception as e:
+            self.log(f"[ERROR] Failed to start service: {e}")
+
+    def stop_service(self):
+        try:
+            subprocess.run([sys.executable, "service.py", "stop"], check=True)
+            subprocess.run([sys.executable, "service.py", "remove"], check=True)
+            self.log("[INFO] Service stopped and removed")
+        except Exception as e:
+            self.log(f"[ERROR] Failed to stop service: {e}")
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     ConfigManagerApp(root)

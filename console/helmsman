@@ -1,8 +1,28 @@
+#!/usr/bin/env python3
 import requests
 import json
 import os
+from rich.console import Console
+from rich.panel import Panel
+from rich.json import JSON
+from rich.text import Text
+from InquirerPy import inquirer
 
 CONFIG_FILE = "helmsman_config.json"
+console = Console()
+
+# ----------------- Banner -----------------
+def show_welcome_banner():
+    helmsman_ascii = r"""
+    ____                       __          _____ __         ____
+   ╱ __ ╲___  ____ ___  ____  ╱ ╱____     ╱ ___╱╱ ╱_  ___  ╱ ╱ ╱
+  ╱ ╱_╱ ╱ _ ╲╱ __ `__ ╲╱ __ ╲╱ __╱ _ ╲    ╲__ ╲╱ __ ╲╱ _ ╲╱ ╱ ╱ 
+ ╱ _, _╱  __╱ ╱ ╱ ╱ ╱ ╱ ╱_╱ ╱ ╱_╱  __╱   ___╱ ╱ ╱ ╱ ╱  __╱ ╱ ╱  
+╱_╱ │_│╲___╱_╱ ╱_╱ ╱_╱╲____╱╲__╱╲___╱   ╱____╱_╱ ╱_╱╲___╱_╱_╱
+"""
+    infinity_sign = Text("∞", style="bold blue", justify="center")
+    console.print(helmsman_ascii, style="bold cyan")
+    console.print(infinity_sign)
 
 # ----------------- Config -----------------
 def load_config():
@@ -10,7 +30,6 @@ def load_config():
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
     else:
-        # fallback на http://api:8000
         api_host = os.environ.get("API_HOST", "api")
         api_port = os.environ.get("API_PORT", "8000")
         default_config = {"api_url": f"http://{api_host}:{api_port}"}
@@ -25,26 +44,35 @@ API_URL = config.get("api_url", "http://api:8000")
 session = requests.Session()
 auth = None  # (username, password)
 
+# ----------------- Login -----------------
 def login():
     global auth
-    username = input("Username: ").strip()
-    password = input("Password: ").strip()
-    
+    username = inquirer.text(message="Username:").execute()
+    password = inquirer.secret(message="Password:").execute()
+
     resp = session.get(f"{API_URL}/api/servers", auth=(username, password))
     if resp.status_code == 200:
-        print("Login successful!")
+        console.print("[bold green]Login successful![/]")
+        show_welcome_banner()
         auth = (username, password)
     else:
-        print(f"Login failed: {resp.status_code} - {resp.text}")
+        console.print(f"[bold red]Login failed: {resp.status_code}[/] - {resp.text}")
         login()
 
 # ----------------- Helpers -----------------
 def safe_print_json(resp):
     try:
-        print(json.dumps(resp.json(), indent=4))
+        console.print(JSON(resp.text))
     except Exception:
-        print("Response is not valid JSON:")
-        print(resp.text)
+        console.print(Panel(resp.text, title="Response", style="bold red"))
+
+def choose_option(title, options):
+    """Повертає ключ, а не кортеж"""
+    choice = inquirer.select(
+        message=title,
+        choices=[{"name": desc[0], "value": key} for key, desc in options.items()],
+    ).execute()
+    return choice
 
 # ----------------- Servers -----------------
 def list_servers():
@@ -52,15 +80,15 @@ def list_servers():
     safe_print_json(resp)
 
 def get_server():
-    server_id = int(input("Server ID: "))
+    server_id = int(inquirer.number(message="Server ID:").execute())
     resp = session.get(f"{API_URL}/api/servers/{server_id}", auth=auth)
     safe_print_json(resp)
 
 def create_server():
-    name = input("Server name: ")
-    remote_url = input("Remote URL: ")
-    created_by = input("Created by: ")
-    one_c_name = input("1C name (optional): ")
+    name = inquirer.text(message="Server name:").execute()
+    remote_url = inquirer.text(message="Remote URL:").execute()
+    created_by = inquirer.text(message="Created by:").execute()
+    one_c_name = inquirer.text(message="1C name (optional):").execute()
 
     data = {
         "name": name,
@@ -71,26 +99,23 @@ def create_server():
 
     resp = session.post(f"{API_URL}/api/servers", json=data, auth=auth)
     if resp.status_code != 201:
-        print("Error creating server:")
+        console.print("[bold red]Error creating server:[/]")
         safe_print_json(resp)
         return
 
     resp_last = session.get(f"{API_URL}/api/servers/last-created", auth=auth)
     if resp_last.status_code == 200:
         data = resp_last.json()
-        print("\nServer created successfully!")
-        print(f"   ID: {data['id']}")
-        print(f"   Name: {data['name']}")
-        print(f"   Agent password: {data['agent_password']}")
+        console.print(Panel(f"Server created successfully!\nID: {data['id']}\nName: {data['name']}\nAgent password: {data['agent_password']}", title="Success", style="bold green"))
     else:
-        print("Server created but could not fetch details.")
+        console.print("Server created but could not fetch details.")
         safe_print_json(resp_last)
 
 # ----------------- Commands -----------------
 def send_command():
-    server_id = int(input("Server ID: "))
-    command = input("Command (leave blank if using script): ")
-    script = input("Script filename (optional): ")
+    server_id = int(inquirer.number(message="Server ID:").execute())
+    command = inquirer.text(message="Command (leave blank if using script):").execute()
+    script = inquirer.text(message="Script filename (optional):").execute()
 
     data = {
         "server_id": server_id,
@@ -101,21 +126,21 @@ def send_command():
     resp = session.post(f"{API_URL}/api/send-command", json=data, auth=auth)
     if resp.status_code == 201:
         data = resp.json()
-        print(f"Command sent successfully! Command ID: {data['command_id']}")
+        console.print(f"[bold green]Command sent successfully! Command ID: {data['command_id']}[/]")
     else:
         safe_print_json(resp)
 
 def get_command():
-    server_id = int(input("Server ID: "))
+    server_id = int(inquirer.number(message="Server ID:").execute())
     resp = session.get(f"{API_URL}/api/get-command/{server_id}", auth=auth)
     safe_print_json(resp)
 
 # ----------------- Results -----------------
 def send_result():
-    server_id = int(input("Server ID: "))
-    command_id = int(input("Command ID: "))
-    password = input("Agent password: ")
-    result = input("Result: ")
+    server_id = int(inquirer.number(message="Server ID:").execute())
+    command_id = int(inquirer.number(message="Command ID:").execute())
+    password = inquirer.secret(message="Agent password:").execute()
+    result = inquirer.text(message="Result:").execute()
 
     data = {
         "server_id": server_id,
@@ -128,20 +153,20 @@ def send_result():
     safe_print_json(resp)
 
 def get_result():
-    command_id = int(input("Command ID: "))
+    command_id = int(inquirer.number(message="Command ID:").execute())
     resp = session.get(f"{API_URL}/api/get-result/{command_id}", auth=auth)
     safe_print_json(resp)
-    
+
 # ----------------- Users -----------------
 def list_users():
     resp = session.get(f"{API_URL}/api/users", auth=auth)
     safe_print_json(resp)
 
 def create_user():
-    username = input("Username: ")
-    password = input("Password: ")
-    role = input("Role (admin/user): ")
-    visible_name = input("Visible name (first and second name, UA): ")
+    username = inquirer.text(message="Username:").execute()
+    password = inquirer.secret(message="Password:").execute()
+    role = inquirer.select(message="Role:", choices=["admin","user"]).execute()
+    visible_name = inquirer.text(message="Visible name (UA):").execute()
 
     data = {
         "username": username,
@@ -154,15 +179,15 @@ def create_user():
     safe_print_json(resp)
 
 def update_user_password():
-    username = input("Username: ")
-    new_password = input("New password: ")
+    username = inquirer.text(message="Username:").execute()
+    new_password = inquirer.secret(message="New password:").execute()
 
     data = {"password": new_password}
     resp = session.put(f"{API_URL}/api/users/{username}/password", json=data, auth=auth)
     safe_print_json(resp)
 
 def delete_user():
-    username = input("Username: ")
+    username = inquirer.text(message="Username:").execute()
     resp = session.delete(f"{API_URL}/api/users/{username}", auth=auth)
     safe_print_json(resp)
 
@@ -172,12 +197,12 @@ def list_user_servers():
     safe_print_json(resp)
 
 def assign_server_to_user():
-    server_id = int(input("Server ID to assign: "))
+    server_id = int(inquirer.number(message="Server ID to assign:").execute())
     resp = session.post(f"{API_URL}/api/assign-server", json={"server_id": server_id}, auth=auth)
     safe_print_json(resp)
 
 def remove_server_from_user():
-    server_id = int(input("Server ID to remove: "))
+    server_id = int(inquirer.number(message="Server ID to remove:").execute())
     resp = session.delete(f"{API_URL}/api/unassign-server/{server_id}", auth=auth)
     safe_print_json(resp)
 
@@ -217,32 +242,18 @@ CATEGORY_ACTIONS = {
 
 def category_menu(category_dict):
     while True:
-        print("\n--- Choose action ---")
-        for key, (desc, _) in category_dict.items():
-            print(f"{key}. {desc}")
-        choice = input("Option: ").strip()
-        action = category_dict.get(choice)
-        if not action:
-            print("Invalid choice!")
-            continue
+        choice = choose_option("Choose action", category_dict)
         if choice == "0":
             break
-        _, func = action
+        _, func = category_dict[choice]
         func()
 
 def main_menu():
     while True:
-        print("\n=== Main Menu ===")
-        for key, (desc, _) in CATEGORY_ACTIONS.items():
-            print(f"{key}. {desc}")
-        choice = input("Choose category: ").strip()
-        category = CATEGORY_ACTIONS.get(choice)
-        if not category:
-            print("Invalid choice!")
-            continue
+        choice = choose_option("=== Main Menu ===", CATEGORY_ACTIONS)
         if choice == "0":
             break
-        _, actions = category
+        _, actions = CATEGORY_ACTIONS[choice]
         category_menu(actions)
 
 if __name__ == "__main__":

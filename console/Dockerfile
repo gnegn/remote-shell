@@ -4,7 +4,12 @@ WORKDIR /app
 
 COPY . /app/
 
-RUN pip install --no-cache-dir requests
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir \
+       requests==2.31.0 \
+       rich==13.7.1 \
+       InquirerPy
+
 
 VOLUME ["/app"]
 

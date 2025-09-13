@@ -13,28 +13,29 @@ logging.basicConfig(
 )
 log = logging.getLogger("agent")
 
-CONFIG_FILE = sys.argv[1] if len(sys.argv) > 1 else "agent_config.json"
+# ────────────────────────────────────────── Dir ───────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "config", "config_NAME.json")
 
-DEFAULT_CONFIG = {
-    "server_url": "http://10.0.2.2:8000",
-    "server_id": 1,
-    "password": "",   
-    "poll_interval": 2
-}
+TEMP_DIR = os.path.join(BASE_DIR, "temp")
+os.makedirs(TEMP_DIR, exist_ok=True)
+TEMP_SCRIPT = os.path.join(TEMP_DIR, "agent_temp_script.ps1")
 
-
+# ───────────────────────────────────── Config load ────────────────────────────────────────────
 if not os.path.exists(CONFIG_FILE):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(DEFAULT_CONFIG, f, indent=4)
+    log.error(f"Config file {CONFIG_FILE} not found!")
+    sys.exit(1)
 
 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
     config = json.load(f)
 
-SERVER_URL = config.get("server_url", DEFAULT_CONFIG["server_url"])
-SERVER_ID = config.get("server_id", DEFAULT_CONFIG["server_id"])
-POLL_INTERVAL = config.get("poll_interval", DEFAULT_CONFIG["poll_interval"])
+SERVER_URL = config.get("server_url")
+SERVER_ID = config.get("server_id")
+POLL_INTERVAL = int(config.get("poll_interval", 5))
+PASSWORD = config.get("password")
 
 
+# ───────────────────────────────────────── API ────────────────────────────────────────────────
 def get_command():
     try:
         url = f"{SERVER_URL}/api/get-command/{SERVER_ID}"
@@ -53,7 +54,7 @@ def send_result(command_id, result):
         payload = {
             "server_id": SERVER_ID,
             "command_id": command_id,
-            "password": config.get("password"),
+            "password": PASSWORD,
             "result": result
         }
         r = requests.post(url, json=payload, timeout=5)
@@ -64,6 +65,8 @@ def send_result(command_id, result):
     except Exception as e:
         log.error(f"Request error: {e}")
 
+
+# ─────────────────────────────────── Command execution ───────────────────────────────────────────
 def execute_command(cmd):
     try:
         log.info(f"Executing command: {cmd}")
@@ -76,19 +79,7 @@ def execute_command(cmd):
         return f"Error executing command: {e}"
 
 
-def download_script(script_name):
-    try:
-        url = f"{SERVER_URL}/api/download-script/{script_name}"
-        r = requests.get(url, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            return data.get("content")
-        log.error(f"Cannot download script: {r.status_code} {r.text}")
-    except Exception as e:
-        log.error(f"Failed to download script: {e}")
-    return None
-
-
+# ───────────────────────────────────────── Main ─────────────────────────────────────────────────
 def main():
     log.info(f"Agent started with config: {CONFIG_FILE}")
     log.info(f"Connecting to {SERVER_URL} (server_id={SERVER_ID}, poll={POLL_INTERVAL}s)")
@@ -96,20 +87,18 @@ def main():
     while True:
         cmd_data = get_command()
         if cmd_data and cmd_data.get("command"):
-            is_script = cmd_data.get("is_script", False)
             command = cmd_data["command"]
+            is_script = cmd_data.get("is_script", False)
 
             if is_script:
                 log.info(f"Received script: {command}")
                 script_content = cmd_data.get("script_content", "")
-                temp_path = os.path.join(os.getenv("TEMP", "C:\\Temp"), "agent_temp_script.ps1")
 
                 try:
-                    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-                    with open(temp_path, "w", encoding="utf-8") as f:
+                    with open(TEMP_SCRIPT, "w", encoding="utf-8") as f:
                         f.write(script_content)
-                    log.info(f"Script saved to {temp_path}")
-                    result = execute_command(f"powershell -ExecutionPolicy Bypass -File \"{temp_path}\"")
+                    log.info(f"Script saved to {TEMP_SCRIPT}")
+                    result = execute_command(f'powershell -ExecutionPolicy Bypass -File "{TEMP_SCRIPT}"')
                 except Exception as e:
                     log.error(f"Failed to execute script: {e}")
                     result = f"[ERROR] Failed to execute script: {e}"

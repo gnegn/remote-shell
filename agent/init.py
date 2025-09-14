@@ -3,8 +3,10 @@ import json
 import tkinter as tk
 from tkinter import messagebox
 
-CONFIG_DIR = "config"
-TEMP_DIR = "temp"
+# ───────────────────────────────────── Папки ─────────────────────────────────────
+BASE_DIR = r"C:\RmAgent"
+CONFIG_DIR = os.path.join(BASE_DIR, "config")
+TEMP_DIR = os.path.join(BASE_DIR, "temp")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
@@ -23,7 +25,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("agent")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = r"{base_dir}"
 CONFIG_FILE = os.path.join(BASE_DIR, "config", "{config_filename}")
 
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
@@ -114,12 +116,11 @@ if __name__ == "__main__":
     main()
 '''
 
-# ───────────────────────────────────────── GUI ─────────────────────────────────────────────────
+# ───────────────────────────────────── GUI ─────────────────────────────────────
 root = tk.Tk()
 root.title("Config Generator")
 
 def paste(event):
-    """Вставка з буфера обміну через Ctrl+V"""
     event.widget.insert(tk.INSERT, root.clipboard_get())
     return "break"
 
@@ -143,14 +144,14 @@ def save_config():
         "poll_interval": int(poll_interval) if poll_interval.isdigit() else 5
     }
 
-# ───────────────────────────────────────── Cofnig safe ─────────────────────────────────────────────────
+    # ─────────────────────────────── Зберігаємо config ───────────────────────────────
     config_path = os.path.join(CONFIG_DIR, config_filename)
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=4, ensure_ascii=False)
 
-# ──────────────────────────────────────── Agent creation ─────────────────────────────────────────────────
-    agent_filename = f"agent_{config_name}.py"
-    agent_code = AGENT_CODE_TEMPLATE.format(config_filename=config_filename)
+    # ─────────────────────────────── Створюємо агент ───────────────────────────────
+    agent_filename = os.path.join(BASE_DIR, f"agent_{config_name}.py")
+    agent_code = AGENT_CODE_TEMPLATE.format(config_filename=config_filename, base_dir=BASE_DIR)
     with open(agent_filename, "w", encoding="utf-8") as f:
         f.write(agent_code)
 

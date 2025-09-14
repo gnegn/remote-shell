@@ -1,4 +1,3 @@
-# Ensure script runs as Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Error "This script must be run as Administrator!"
     exit 1
@@ -57,7 +56,6 @@ function Install-PythonPackages {
     python -m pip install --upgrade pip
     python -m pip install requests pyinstaller
 
-    # tkinter check
     try {
         python -c "import tkinter" 2>$null
         Write-Host "tkinter is available."
@@ -107,7 +105,6 @@ Install-Chocolatey
 Install-Python
 Install-PythonPackages
 
-# Run remote script and wait for completion
 Run-RemotePythonScript
 
 Uninstall-Python

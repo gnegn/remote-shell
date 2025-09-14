@@ -3,13 +3,14 @@ import json
 import tkinter as tk
 from tkinter import messagebox
 
-# ───────────────────────────────────── Папки ─────────────────────────────────────
+# ───────────────────────────────────── Dir ─────────────────────────────────────
 BASE_DIR = r"C:\RmAgent"
 CONFIG_DIR = os.path.join(BASE_DIR, "config")
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+# ───────────────────────────────────── Agent template ─────────────────────────────────────
 AGENT_CODE_TEMPLATE = '''import requests
 import time
 import subprocess
@@ -132,7 +133,7 @@ def save_config():
     poll_interval = entry_poll_interval.get().strip()
 
     if not config_name:
-        messagebox.showerror("Помилка", "Поле config_name не може бути порожнім")
+        messagebox.showerror("Error", "config_name can not be empty!")
         return
 
     config_filename = f"{config_name}.json"
@@ -144,18 +145,21 @@ def save_config():
         "poll_interval": int(poll_interval) if poll_interval.isdigit() else 5
     }
 
-    # ─────────────────────────────── Зберігаємо config ───────────────────────────────
+    # ─────────────────────────────── Save config ───────────────────────────────
     config_path = os.path.join(CONFIG_DIR, config_filename)
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=4, ensure_ascii=False)
 
-    # ─────────────────────────────── Створюємо агент ───────────────────────────────
+    # ─────────────────────────────── Make agent ───────────────────────────────
     agent_filename = os.path.join(BASE_DIR, f"agent_{config_name}.py")
-    agent_code = AGENT_CODE_TEMPLATE.format(config_filename=config_filename, base_dir=BASE_DIR)
+    agent_code = AGENT_CODE_TEMPLATE.format(
+        config_filename=config_filename,
+        base_dir=BASE_DIR.replace("\\", "\\\\") 
+    )
     with open(agent_filename, "w", encoding="utf-8") as f:
         f.write(agent_code)
 
-    messagebox.showinfo("Успіх", f"Конфіг {config_filename} створено, агент {agent_filename} згенеровано!")
+    messagebox.showinfo("Success!", f"Config {config_filename} created, agent {agent_filename} created")
     root.destroy()
 
 labels = ["config_name:", "server_url:", "server_id:", "password:", "poll_interval:"]

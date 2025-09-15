@@ -11,6 +11,7 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # ───────────────────────────────────── Agent template ─────────────────────────────────────
+
 AGENT_CODE_TEMPLATE = '''import requests
 import time
 import subprocess
@@ -76,7 +77,7 @@ def send_result(command_id, result):
 def execute_command(cmd):
     try:
         log.info(f"Executing command: {{cmd}}")
-        completed = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        completed = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding="utf-8")
         output = completed.stdout.strip() + completed.stderr.strip()
         log.info(f"Command output: {{output[:200]}}{{'...' if len(output) > 200 else ''}}")
         return output
@@ -101,7 +102,7 @@ def main():
                     with open(TEMP_SCRIPT, "w", encoding="utf-8") as f:
                         f.write(script_content)
                     log.info(f"Script saved to {{TEMP_SCRIPT}}")
-                    result = execute_command(f'powershell -ExecutionPolicy Bypass -File "{{TEMP_SCRIPT}}"')
+                    result = execute_command(f'powershell -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; & \'{{TEMP_SCRIPT}}\'"')
                 except Exception as e:
                     log.error(f"Failed to execute script: {{e}}")
                     result = f"[ERROR] Failed to execute script: {{e}}"
@@ -116,6 +117,7 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+
 
 # ───────────────────────────────────── GUI ─────────────────────────────────────
 root = tk.Tk()
@@ -156,6 +158,7 @@ def save_config():
         config_filename=config_filename,
         base_dir=BASE_DIR.replace("\\", "\\\\") 
     )
+
     with open(agent_filename, "w", encoding="utf-8") as f:
         f.write(agent_code)
 

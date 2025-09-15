@@ -1,5 +1,5 @@
 # Pull and run docker image on EC2.yml
-name: Deploy full Docker Compose stack to EC2
+name: Deploy full Docker Compose stack to EC2 (no ssh key decoding)
 
 on:
   workflow_dispatch:

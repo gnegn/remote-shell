@@ -34,7 +34,7 @@ jobs:
 
       - name: Debug SSH connection
         run: |
-          ssh -vvv -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -vvv -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             echo 'Connected to:' \$(hostname)
             echo 'User:' \$(whoami)
             id
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Docker & Docker Compose on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             sudo apt-get update -y
             sudo apt install curl software-properties-common ca-certificates apt-transport-https -y
             wget -O- https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor | sudo tee /etc/apt/keyrings/docker.gpg > /dev/null 
@@ -61,7 +61,7 @@ jobs:
 
       - name: Pull Docker images from Docker Hub
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             sudo usermod -aG docker ubuntu
             echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
             docker pull $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
@@ -72,13 +72,13 @@ jobs:
 
       - name: Stop old containers
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             docker rm -f api frontend nginx || true
           "
 
       - name: Run containers with auto-restart
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             docker network create ${NETWORK_NAME} || true
             docker volume create ${SQLITE_VOLUME} || true
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: Configure firewall (Ubuntu)
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ubuntu@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
             sudo ufw allow 22/tcp
             sudo ufw allow 80/tcp
             sudo ufw allow 443/tcp

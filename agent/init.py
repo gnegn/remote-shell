@@ -102,7 +102,7 @@ def main():
                     with open(TEMP_SCRIPT, "w", encoding="utf-8") as f:
                         f.write(script_content)
                     log.info(f"Script saved to {{TEMP_SCRIPT}}")
-                    result = execute_command(f'powershell -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; & \'{{TEMP_SCRIPT}}\'"')
+                    result = execute_command(f"powershell -ExecutionPolicy Bypass -Command \"[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; & '{TEMP_SCRIPT}'\"")
                 except Exception as e:
                     log.error(f"Failed to execute script: {{e}}")
                     result = f"[ERROR] Failed to execute script: {{e}}"

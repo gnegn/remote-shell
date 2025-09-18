@@ -18,16 +18,25 @@ services:
     image: frontend:latest
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - api
     networks:
       - app-network
+    volumes:
+      # конфіг nginx, щоб він підтримував http+https+acme challenge
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      # сертифікати
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      # webroot для ACME challenge
+      - ./frontend/public:/var/www/certbot
 
   console:
     build: ./console
     image: console:latest
-    stdin_open: true   
-    tty: true          
+    stdin_open: true
+    tty: true
     volumes:
       - ./console:/app
     networks:
@@ -35,8 +44,24 @@ services:
     depends_on:
       - api
 
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./frontend/public:/var/www/certbot
+
+  certbot-renew:
+    image: certbot/certbot
+    entrypoint: sh -c "while :; do certbot renew; sleep 12h; done"
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+
 volumes:
   sqlite_data:
+  certbot-etc:
+  certbot-var:
 
 networks:
   app-network:

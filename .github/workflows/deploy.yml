@@ -1,47 +1,59 @@
-#Build and push docker image to docker hub.yml
-name: Build and Push Docker Images
+name: Deploy Docker Compose stack
 
 on:
   workflow_dispatch:
 
 jobs:
-  docker:
-    name: Build and Push Docker Images
+  deploy:
     runs-on: ubuntu-latest
 
     env:
-      COMMIT_SHA: ${{ github.sha }}
+      EC2_IP: ${{ secrets.EC2_IP }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       IMAGE_TAG: latest
-      API_IMAGE: api
-      FRONTEND_IMAGE: frontend
-      NGINX_IMAGE: nginx
-      CONSOLE_IMAGE: console
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up Docker Compose
-        run: sudo apt-get update && sudo apt-get install -y docker-compose
-
-      - name: Build and push Docker images
+      - name: Set up SSH key
         run: |
-          # API
-          docker build -t $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG ./api
-          docker push $DOCKERHUB_USERNAME/$API_IMAGE:$IMAGE_TAG
+          echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
+          chmod 600 ec2_key.pem
 
-          # Frontend
-          docker build -t $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG ./frontend
-          docker push $DOCKERHUB_USERNAME/$FRONTEND_IMAGE:$IMAGE_TAG
+      - name: Install Docker & Docker Compose on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
+            sudo apt-get update -y
+            sudo apt-get install -y curl git
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com | sh
+            fi
+            if ! command -v docker-compose &> /dev/null; then
+              sudo apt-get install -y docker-compose
+            fi
+            sudo usermod -aG docker softcom
+          "
 
-          # Console
-          docker build -t $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG ./console
-          docker push $DOCKERHUB_USERNAME/$CONSOLE_IMAGE:$IMAGE_TAG
+      - name: Pull repo and update docker-compose.yml
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
+            mkdir -p ~/app && cd ~/app
+            git clone https://github.com/${{ github.repository }} . || (cd ~/app && git fetch --all && git reset --hard origin/main)
+          "
+
+      - name: Pull Docker images and deploy stack
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
+            cd ~/app
+            echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
+          "
+
+      - name: Configure firewall
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem softcom@$EC2_IP "
+            sudo ufw allow 22/tcp
+            sudo ufw allow 80/tcp
+            sudo ufw allow 443/tcp
+            sudo ufw --force enable || true
+          "

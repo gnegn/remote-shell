@@ -105,7 +105,7 @@ Write-Host ""
 
 $compactCpu = $cpuCores
 $compactRam = [math]::Round($ramGB) 
-$compactDisk = [math]::Round($diskFreeGB)
+$compactDisk = [math]::Round($diskTotalGB)
 $compact = "{0}/{1}/{2}" -f $compactCpu, $compactRam, $compactDisk
 Write-Host "Recources (compactly): $compact"
 Write-Host ""

@@ -111,6 +111,11 @@ def create_server():
         console.print("Server created but could not fetch details.")
         safe_print_json(resp_last)
 
+def delete_server_by_id():
+    server_id = int(inquirer.number(message="Server ID to delete:").execute())
+    resp = session.delete(f"{API_URL}/api/servers/{server_id}", auth=auth)
+    safe_print_json(resp)
+    
 # ----------------- Commands -----------------
 def send_command():
     server_id = int(inquirer.number(message="Server ID:").execute())
@@ -219,6 +224,7 @@ CATEGORY_ACTIONS = {
         "1": ("List servers", list_servers),
         "2": ("Get server by ID", get_server),
         "3": ("Create server", create_server),
+        "4": ("Delete server by ID", delete_server_by_id),
         "0": ("Back", None)
     }),
     "3": ("Commands", {

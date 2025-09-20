@@ -1,3 +1,6 @@
+﻿[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# ──────────────────────────────────────────────────────────────────────────────
+#                            Config
 $ignoredPattern = @("admin","administrator","администратор","гость","defaultaccount","softcom","WDAGUtilityAccount", "softcom.it", "softcom_it")
 $thresholdDays = 180
 $today = Get-Date
@@ -7,6 +10,9 @@ $normalUsers = @()
 $serviceUsers = @()
 $activeCount = 0
 $inactiveCount = 0
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                               Get data
 
 foreach ($user in $users) {
     $name = $user.Name
@@ -32,15 +38,15 @@ foreach ($user in $users) {
         if ($status -eq "Активний") { $activeCount++ } else { $inactiveCount++ }
     }
 }
-
+# ──────────────────────────────────────────────────────────────────────────────
+#                            Output
 Write-Host "`n"
-Write-Host "===== КОРИСТУВАЧІ =====" -ForegroundColor Yellow
 if ($normalUsers.Count -gt 0) { $normalUsers | Sort-Object Активний -Descending | Format-Table -AutoSize } else { Write-Host "Звичайних користувачів не знайдено." }
 
-Write-Output "===================================="
+Write-Host "`n"
 Write-Output "Активні користувачі: $activeCount"
 Write-Output "Неактивні користувачі: $inactiveCount"
 Write-Output "Кількість користувачів створених: $($normalUsers.Count)"
 
-Write-Host "`n===== СЛУЖБОВІ АККАУНТИ =====" -ForegroundColor Yellow
+Write-Host "`nСлужбові акаунти:" 
 if ($serviceUsers.Count -gt 0) { $serviceUsers | Format-Table -AutoSize } else { Write-Host "Службових акаунтів не знайдено." }

@@ -61,6 +61,7 @@ agent/configurator.spec
 agent/icon.png
 agent/icon.ico
 agent/temp
+agent/config.json
 
 # Python
 __pycache__/

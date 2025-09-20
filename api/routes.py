@@ -79,9 +79,17 @@ def init_app(app):
             return jsonify({"error": "Server not found"}), 404
 
         try:
+            # Видаляємо пов'язані PendingCommand
+            PendingCommand.query.filter_by(server_id=server_id).delete(synchronize_session=False)
+            # Видаляємо пов'язані CommandResult
+            CommandResult.query.filter_by(server_id=server_id).delete(synchronize_session=False)
+            # Видаляємо записи UserServer
+            UserServer.query.filter_by(server_id=server_id).delete(synchronize_session=False)
+            # Видаляємо сам сервер
             db.session.delete(s)
+
             db.session.commit()
-            return jsonify({"message": f"Server {server_id} deleted successfully"}), 200
+            return jsonify({"message": f"Server {server_id} and all related data deleted successfully"}), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": f"Failed to delete server: {str(e)}"}), 500

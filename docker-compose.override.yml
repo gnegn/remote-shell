@@ -1,6 +1,0 @@
-services:
-  frontend:
-    ports:
-      - "80:80" 
-    volumes:
-      - ./frontend/nginx.dev.conf:/etc/nginx/nginx.conf:ro

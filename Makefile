@@ -3,6 +3,9 @@
 up:
 	docker compose up -d --build 
 
+up-https
+	docker compose -f docker-compose.yml up -d
+
 down:
 	docker compose down
 
